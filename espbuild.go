@@ -38,7 +38,7 @@ func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 
   if args.Len() < 1 {
-	  log.Fatalf("%s: requires one or more arguments", b.Name);
+    log.Fatalf("%s: requires one or more arguments", b.Name);
   }
 
   depCommand := "apk add"
@@ -53,6 +53,10 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
 }
 
 func main() {
+  if len(os.Args) < 2 {
+    log.Fatal("You must supply the config file to build")
+  }
+
   script := os.Args[1]
   thread := &starlark.Thread{
 	  Name: "espbuild",
