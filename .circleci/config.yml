@@ -17,7 +17,7 @@ jobs:
       - run: go mod init .
       - run: go get github.com/tcnksm/ghr@v0.12.1
       - run: go get go.starlark.net/starlark
-      - run: CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' .
+      - run: CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
       - run: ls -al
       - run: ~/go/bin/ghr $GHR_FLAGS -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild
 
