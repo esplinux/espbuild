@@ -1,0 +1,26 @@
+version: 2.1
+
+executors:
+  alpine:
+    docker:
+      - image: alpine:3.9
+    working_directory: ~/
+    environment:
+      VERSION: 0.01
+
+jobs:
+  build_espbuild:
+    executor: alpine
+    steps:
+      - run: apk add ca-certificates go git musl-dev 
+      - run: go get github.com/esplinux/espbuild
+      - run: go mod init .
+      - run: go get github.com/tcnksm/ghr@v0.12.1
+      - run: mkdir -p ~/workspace/ghr/bin
+      - run: cp /root/go/bin/ghr ~/workspace/ghr/bin
+      - run: ~/go/bin/ghr $GHR_FLAGS -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/go/bin/espbuild
+
+workflows:
+  build:
+    jobs:
+      - build_espbuild
