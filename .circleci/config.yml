@@ -12,7 +12,7 @@ jobs:
   build_espbuild:
     executor: alpine
     steps:
-      - run: apk add ca-certificates go git musl-dev 
+      - run: apk add ca-certificates go build-base
       - checkout
       - run: pwd
       - run: ls -al
@@ -20,9 +20,7 @@ jobs:
       - run: CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' .
       - run: go mod init .
       - run: go get github.com/tcnksm/ghr@v0.12.1
-      - run: mkdir -p ~/workspace/ghr/bin
-      - run: cp /root/go/bin/ghr ~/workspace/ghr/bin
-      - run: ~/go/bin/ghr $GHR_FLAGS -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/go/bin/espbuild
+      - run: ~/go/bin/ghr $GHR_FLAGS -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild
 
 workflows:
   build:
