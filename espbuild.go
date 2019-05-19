@@ -114,7 +114,7 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
       if subCommand == "commit" {
         commit := toString( kwargs[1].Index(1) )
         shell("git clone " + url + " src")
-        shell("cd src; git reset --hard" + commit)
+        shell("cd src; git reset --hard " + commit)
       } else if subCommand == "branch" {
         branch := toString( kwargs[1].Index(1) )
         shell("git clone --branch " + branch + " --depth 1 " + url + " src")
