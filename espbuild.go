@@ -20,13 +20,6 @@ func toString(arg starlark.Value) (string) {
 }
 
 func shell(arg string) {
-  //out, err := exec.Command("/bin/sh", "-xec", arg).CombinedOutput()
-  //fmt.Printf("%s", out)
-
-  //if err != nil {
-  //  log.Fatal(err)
-  //}
-
   var wg sync.WaitGroup
 
   cmd := exec.Command("/bin/sh", "-xec", arg)
@@ -87,7 +80,7 @@ func shell(arg string) {
 
 func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 {
-    log.Fatalf("%s: requires one or more arguments", b.Name);
+    log.Fatalf("%s: requires one or more arguments", b.Name());
   }
 
   shell( toString(args[0]) )
@@ -95,10 +88,57 @@ func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
   return starlark.None, nil
 }
 
+func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+  if (args.Len() < 1 && len(kwargs) < 1) {
+    log.Fatalf("%s: requires one or more arguments", b.Name());
+  }
+
+  if (args.Len() > 0) {
+    shell( toString(args[0]) )
+  }
+
+  if (len(kwargs) > 0) {
+    command := toString(kwargs[0].Index(0));
+    subCommand := "";
+    if len(kwargs) > 1 {
+      subCommand = toString(kwargs[1].Index(0));
+    }
+
+    if command == "url" {
+      url := toString( kwargs[0].Index(1) )
+      shell("curl -L " + url + " | bsdtar -xf- -C src --strip-components=1")
+    } else if command == "git" {
+      url := toString( kwargs[0].Index(1) )
+      shell("git clone " + url + " src")
+
+      if subCommand == "commit" {
+        commit := toString( kwargs[1].Index(1) )
+        shell("git clone " + url + " src")
+        shell("cd src; git reset --hard" + commit)
+      } else if subCommand == "branch" {
+        branch := toString( kwargs[1].Index(1) )
+        shell("git clone --branch " + branch + " --depth 1 " + url + " src")
+      } else {
+        shell("git clone " + url + " src")
+      }
+    } else {
+      for index, element := range kwargs {
+        for i:=0; i < element.Len(); i++ {
+          fmt.Printf("UNKNOWN CHECKOUT COMMAND %v-%v:%v:%s\n", command, index, i, element.Index(i))
+        }
+      }
+      log.Fatal("UNKNWON CHECKOUT COMMAND!!!!")
+    }
+  }
+
+  return starlark.None, nil
+}
+
+
 func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 
   if args.Len() < 1 {
-    log.Fatalf("%s: requires one or more arguments", b.Name);
+    log.Fatalf("%s: requires one or more arguments", b.Name());
   }
 
   depCommand := "apk add"
@@ -125,7 +165,7 @@ func main() {
   predeclared := starlark.StringDict{
     "dependencies": starlark.NewBuiltin("dependencies", dependenciesBuiltIn),
     "pre": starlark.NewBuiltin("pre", shellBuiltIn),
-    "checkout": starlark.NewBuiltin("checkout", shellBuiltIn),
+    "checkout": starlark.NewBuiltin("checkout", checkoutBuiltIn),
     "patch": starlark.NewBuiltin("patch", shellBuiltIn),
     "config": starlark.NewBuiltin("config", shellBuiltIn),
     "build": starlark.NewBuiltin("build", shellBuiltIn),
