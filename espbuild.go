@@ -70,6 +70,7 @@ func main() {
     "config": starlark.NewBuiltin("config", shellBuiltIn),
     "build": starlark.NewBuiltin("build", shellBuiltIn),
     "install": starlark.NewBuiltin("install", shellBuiltIn),
+    "package": starlark.NewBuiltin("package", shellBuiltIn),
     "post": starlark.NewBuiltin("post", shellBuiltIn),
   }
 
