@@ -12,7 +12,7 @@ jobs:
   build_espbuild:
     executor: alpine
     steps:
-      - run: apk add ca-certificates go build-base
+      - run: apk add ca-certificates go git build-base
       - checkout
       - run: pwd
       - run: ls -al
