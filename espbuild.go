@@ -106,10 +106,10 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
 
     if command == "url" {
       url := toString( kwargs[0].Index(1) )
+      shell("mkdir src")
       shell("curl -L " + url + " | bsdtar -xf- -C src --strip-components=1")
     } else if command == "git" {
       url := toString( kwargs[0].Index(1) )
-      shell("git clone " + url + " src")
 
       if subCommand == "commit" {
         commit := toString( kwargs[1].Index(1) )
