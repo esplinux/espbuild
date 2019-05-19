@@ -14,7 +14,9 @@ jobs:
     steps:
       - run: apk add ca-certificates go git musl-dev 
       - checkout
+      - run: pwd
       - run: ls -al
+      - run: go get go.starlark.net/starlark
       - run: CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' .
       - run: go mod init .
       - run: go get github.com/tcnksm/ghr@v0.12.1
