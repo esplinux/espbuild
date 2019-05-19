@@ -10,6 +10,8 @@ import "os/exec"
 import "strings"
 import "sync"
 
+var dependencies bool
+
 func toString(arg starlark.Value) (string) {
   argStr,isString := starlark.AsString( arg )
   if isString {
@@ -137,6 +139,10 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
 
 func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 
+  if !dependencies {
+    return starlark.None, nil
+  }
+
   if args.Len() < 1 {
     log.Fatalf("%s: requires one or more arguments", b.Name());
   }
@@ -153,11 +159,20 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
 }
 
 func main() {
+  dependencies=true
   if len(os.Args) < 2 {
     log.Fatal("You must supply the config file to build")
   }
 
   script := os.Args[1]
+
+  if len(os.Args) > 2 {
+    if os.Args[2] == "--nodeps" {
+      println("Dependencies disabled")
+      dependencies=false
+    } 
+  }
+
   thread := &starlark.Thread{
 	  Name: "espbuild",
   }
