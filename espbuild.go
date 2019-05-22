@@ -81,8 +81,8 @@ func shell(arg string) {
 }
 
 func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-  if args.Len() < 1 {
-    log.Fatalf("%s: requires one or more arguments", b.Name())
+  if args.Len() < 1 || len(kwargs) !=0 {
+    log.Fatalf("%s-%s: requires a single string argument", thread.Name, b.Name())
   }
 
   shell( toString(args[0]) )
@@ -92,18 +92,18 @@ func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 
 func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 && len(kwargs) < 1 {
-    log.Fatalf("%s: requires one or more arguments", b.Name())
+    log.Fatalf("%s-%s: requires one or more arguments", thread.Name, b.Name())
   }
 
-  if (args.Len() > 0) {
+  if args.Len() > 0 {
     shell( toString(args[0]) )
   }
 
-  if (len(kwargs) > 0) {
-    command := toString(kwargs[0].Index(0));
-    subCommand := "";
+  if len(kwargs) > 0 {
+    command := toString(kwargs[0].Index(0))
+    subCommand := ""
     if len(kwargs) > 1 {
-      subCommand = toString(kwargs[1].Index(0));
+      subCommand = toString(kwargs[1].Index(0))
     }
 
     if command == "url" {
@@ -143,8 +143,8 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
     return starlark.None, nil
   }
 
-  if args.Len() < 1 {
-    log.Fatalf("%s: requires one or more arguments", b.Name())
+  if args.Len() < 1 || len(kwargs) != 0 {
+    log.Fatalf("%s-%s: requires one or more arguments", thread.Name, b.Name())
   }
 
   depCommand := "apk add"
