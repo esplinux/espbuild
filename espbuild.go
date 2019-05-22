@@ -12,7 +12,7 @@ import "sync"
 
 var dependencies bool
 
-func toString(arg starlark.Value) (string) {
+func toString(arg starlark.Value) string {
   argStr,isString := starlark.AsString( arg )
   if isString {
     return argStr
@@ -82,7 +82,7 @@ func shell(arg string) {
 
 func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 {
-    log.Fatalf("%s: requires one or more arguments", b.Name());
+    log.Fatalf("%s: requires one or more arguments", b.Name())
   }
 
   shell( toString(args[0]) )
@@ -91,8 +91,8 @@ func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 }
 
 func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-  if (args.Len() < 1 && len(kwargs) < 1) {
-    log.Fatalf("%s: requires one or more arguments", b.Name());
+  if args.Len() < 1 && len(kwargs) < 1 {
+    log.Fatalf("%s: requires one or more arguments", b.Name())
   }
 
   if (args.Len() > 0) {
@@ -144,7 +144,7 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
   }
 
   if args.Len() < 1 {
-    log.Fatalf("%s: requires one or more arguments", b.Name());
+    log.Fatalf("%s: requires one or more arguments", b.Name())
   }
 
   depCommand := "apk add"
