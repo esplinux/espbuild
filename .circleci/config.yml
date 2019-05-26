@@ -28,7 +28,7 @@ jobs:
   espbuild-static:
     executor: alpine
     steps:
-      - run: apk add ca-certificates bsdtar go git build-base
+      - run: apk add ca-certificates libarchive-tools go git build-base
       - checkout
       - attach_workspace:
           at: ~/workspace
@@ -46,7 +46,7 @@ jobs:
   espbuild:
     executor: alpine
     steps:
-      - run: apk add ca-certificates bsdtar go git build-base
+      - run: apk add ca-certificates libarchive-tools go git build-base
       - checkout
       - attach_workspace:
           at: ~/workspace
