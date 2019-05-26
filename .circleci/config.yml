@@ -7,6 +7,7 @@ executors:
     working_directory: ~/
     environment:
       VERSION: 0.01
+      GHR_VERSION: 0.12.1
 
 jobs:
   prepare:
@@ -14,36 +15,51 @@ jobs:
     steps:
       - run: apk add ca-certificates go git build-base
       - run: go mod init .
-      - run: go get github.com/tcnksm/ghr@v0.12.1
-      - run: ~/go/bin/ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ~/workspace/versions.txt
+      - run: go get github.com/tcnksm/ghr@v${GHR_VERSION}
+      - run: export | grep VERSION > ~/versions.txt
+      - run: mkdir -p ~/workspace/bin
+      - run: cp /root/go/bin/ghr ~/workspace/bin
+      - run: ~/go/bin/ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ~/versions.txt
+      - persist_to_workspace:
+          root: ~/workspace
+          paths: 
+            - bin
 
   espbuild-static:
     executor: alpine
     steps:
       - run: apk add ca-certificates bsdtar go git build-base
       - checkout
-      - run: go get go.starlark.net/starlark
-      - run: CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
-      - run: mkdir -p ~/build/bin
-      - run: cp ~/espbuild ~/build/bin
-      - run: bsdtar cvfz ~/espbuild-static.tar.gz -C ~/build .
-      - run: go mod init .
-      - run: go get github.com/tcnksm/ghr@v0.12.1
-      - run: ~/go/bin/ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild-static.tar.gz
+      - attach_workspace:
+          at: ~/workspace
+      - run:
+          name: Build
+          command: |
+            export PATH=~/workspace/bin:$PATH
+            go get go.starlark.net/starlark
+            CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
+            mkdir -p ~/build/bin
+            cp ~/espbuild ~/build/bin
+            bsdtar cvfz ~/espbuild-static.tar.gz -C ~/build .
+            ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild-static.tar.gz
 
   espbuild:
     executor: alpine
     steps:
       - run: apk add ca-certificates bsdtar go git build-base
       - checkout
-      - run: go get go.starlark.net/starlark
-      - run: go build espbuild.go
-      - run: mkdir -p ~/build/bin
-      - run: cp ~/espbuild ~/build/bin
-      - run: bsdtar cvfz ~/espbuild.tar.gz -C ~/build .
-      - run: go mod init .
-      - run: go get github.com/tcnksm/ghr@v0.12.1
-      - run: ~/go/bin/ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild.tar.gz
+      - attach_workspace:
+          at: ~/workspace
+      - run:
+          name: Build
+          command: |
+            export PATH=~/workspace/bin:$PATH
+            go get go.starlark.net/starlark
+            go build espbuild.go
+            mkdir -p ~/build/bin
+            cp ~/espbuild ~/build/bin
+            bsdtar cvfz ~/espbuild.tar.gz -C ~/build .
+            ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild.tar.gz
 
 workflows:
   build:
