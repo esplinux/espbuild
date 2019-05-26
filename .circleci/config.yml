@@ -13,6 +13,7 @@ jobs:
     executor: alpine
     steps:
       - run: apk add ca-certificates go git build-base
+      - run: go mod init .
       - run: go get github.com/tcnksm/ghr@v0.12.1
       - run: ~/go/bin/ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ~/workspace/versions.txt
 
