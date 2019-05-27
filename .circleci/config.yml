@@ -40,6 +40,7 @@ jobs:
             CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
             mkdir -p ~/build/bin
             cp ~/espbuild ~/build/bin
+            cp ~/build_index ~/build/bin
             bsdtar cvfz ~/espbuild-static.tar.gz -C ~/build .
             ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild-static.tar.gz
 
@@ -58,6 +59,7 @@ jobs:
             go build espbuild.go
             mkdir -p ~/build/bin
             cp ~/espbuild ~/build/bin
+            cp ~/build_index ~/build/bin
             bsdtar cvfz ~/espbuild.tar.gz -C ~/build .
             ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild.tar.gz
 

@@ -1,0 +1,47 @@
+#!/bin/sh -e
+
+if [ "$#" -lt 2 ]; then
+  echo "Usage: $0 REPO VERSION" >&2
+  exit 0
+else
+  REPO=$1
+  VERSION=$2
+fi
+
+BASE_URL=https://github.com/esplinux-$REPO
+
+TMP_FILE="$(mktemp)"
+
+echo "# INDEX for $REPO"
+curl -L https://api.github.com/orgs/esplinux-$REPO/repos | grep full_name | grep -v INDEX | cut -d: -f2 | tr ',' ' ' | xargs -n1 echo > $TMP_FILE
+for i in $(cat $TMP_FILE); do
+    curl -L https://github.com/$i/releases/download/$VERSION/version.txt
+done
+rm $TMP_FILE
+
+# musl
+#curl -L $BASE_URL/musl/releases/download/$VERSION/version.txt
+
+#dash
+#curl -L $BASE_URL/dash/releases/download/$VERSION/version.txt
+
+#toybox
+#curl -L $BASE_URL/toybox/releases/download/$VERSION/version.txt
+
+#ca-certificates
+#curl -L $BASE_URL/ca-certificates/releases/download/$VERSION/version.txt
+
+#tcurl
+#curl -L $BASE_URL/tcurl/releases/download/$VERSION/version.txt
+
+#esp
+#curl -L $BASE_URL/esp/releases/download/$VERSION/version.txt
+
+#zlib
+#curl -L $BASE_URL/zlib/releases/download/$VERSION/version.txt
+
+#llvm
+#curl -L $BASE_URL/llvm/releases/download/$VERSION/version.txt
+
+#espbuild
+#curl -L $BASE_URL/espbuild/releases/download/$VERSION/version.txt
