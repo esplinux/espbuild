@@ -10,7 +10,7 @@ import "os/exec"
 import "strings"
 import "sync"
 
-var dependencies bool
+var dependencyProg string
 
 func toString(arg starlark.Value) string {
   argStr,isString := starlark.AsString( arg )
@@ -139,27 +139,32 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
 
 func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 
-  if !dependencies {
-    return starlark.None, nil
-  }
-
   if args.Len() < 1 || len(kwargs) != 0 {
     log.Fatalf("%s-%s: requires one or more arguments", thread.Name, b.Name())
   }
 
-  depCommand := "apk add"
-
   for i := 0; i < args.Len(); i++ {
-    depCommand = depCommand + " " + toString( args.Index(i) )
+    depCommand := "echo " + toString(args.Index(i)) + " | xargs -n1 " + dependencyProg
+    shell(depCommand)
   }
-
-  shell(depCommand)
-
+  
   return starlark.None, nil
 }
 
 func main() {
-  dependencies=true
+
+  if _, err := os.Stat("/etc/esp-release"); err == nil {
+    // esp based system
+    dependencyProg = "/bin/esp"
+
+  } else if os.IsNotExist(err) {
+    // Assume apk based system
+    dependencyProg = "/sbin/apk add"
+
+  } else {
+    log.Fatal("Unable to determine underlying system")
+  }
+
   if len(os.Args) < 2 {
     log.Fatal("You must supply the config file to build")
   }
@@ -169,7 +174,7 @@ func main() {
   if len(os.Args) > 2 {
     if os.Args[2] == "--nodeps" {
       println("Dependencies disabled")
-      dependencies=false
+      dependencyProg = "echo"
     } 
   }
 
