@@ -155,7 +155,7 @@ func main() {
 
   if _, err := os.Stat("/etc/esp-release"); err == nil {
     // esp based system
-    dependencyProg = "/bin/esp"
+    dependencyProg = "/bin/esp add"
 
   } else if os.IsNotExist(err) {
     // Assume apk based system
