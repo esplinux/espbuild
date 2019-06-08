@@ -10,31 +10,14 @@ executors:
       GHR_VERSION: 0.12.1
 
 jobs:
-  prepare:
-    executor: alpine
-    steps:
-      - run: apk add ca-certificates go git build-base
-      - run: go mod init .
-      - run: go get github.com/tcnksm/ghr@v${GHR_VERSION}
-      - run: export | grep VERSION > ~/versions.txt
-      - run: mkdir -p ~/workspace/bin
-      - run: cp /root/go/bin/ghr ~/workspace/bin
-      - persist_to_workspace:
-          root: ~/workspace
-          paths: 
-            - bin
-
   espbuild:
     executor: alpine
     steps:
       - run: apk add ca-certificates libarchive-tools go git clang build-base
       - checkout
-      - attach_workspace:
-          at: ~/workspace
       - run:
           name: Build
           command: |
-            export PATH=~/workspace/bin:$PATH
             clang --static -Os super_chroot.c -o super_chroot
             strip super_chroot
             go get go.starlark.net/starlark
@@ -44,12 +27,11 @@ jobs:
             cp ~/build_index ~/build/bin
             cp ~/super_chroot ~/build/bin
             bsdtar cvfz ~/espbuild-static.tar.gz -C ~/build .
-            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ~/espbuild-static.tar.gz
+            go mod init .
+            go get github.com/tcnksm/ghr@v${GHR_VERSION}
+            ~/go/bin/ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ~/espbuild-static.tar.gz
 
 workflows:
   build:
     jobs:
-      - prepare
-      - espbuild:
-          requires:
-            - prepare
+      - espbuild
