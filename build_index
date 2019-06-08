@@ -4,17 +4,18 @@ if [ "$#" -lt 2 ]; then
   echo "Usage: $0 REPO VERSION" >&2
   exit 0
 else
-  REPO=$1
-  VERSION=$2
+  REPO="$1"
+  VERSION="$2"
 fi
-
-BASE_URL=https://github.com/esplinux-$REPO
 
 TMP_FILE="$(mktemp)"
 
 echo "# INDEX for $REPO"
-curl -L https://api.github.com/orgs/esplinux-$REPO/repos | grep full_name | grep -v INDEX | cut -d: -f2 | tr ',' ' ' | xargs -n1 echo > $TMP_FILE
-for i in $(cat $TMP_FILE); do
-    curl -L https://github.com/$i/releases/download/$VERSION/version.txt | grep -v "Not Found"
-done
-rm $TMP_FILE
+#curl -L https://api.github.com/orgs/esplinux-"$REPO"/repos | grep full_name | grep -v INDEX | cut -d: -f2 | tr ',' ' ' | xargs -n1 echo > "$TMP_FILE"
+curl -L https://api.github.com/orgs/esplinux-"$REPO"/repos | grep full_name | grep -v INDEX | cut -d: -f2 | tr ',' ' ' | sed 's/^ \"//' | sed 's/\".*$//' > "$TMP_FILE"
+
+while read -r i; do
+  curl -L https://github.com/"$i"/releases/download/"$VERSION"/version.txt | grep -v "Not Found"
+done < "$TMP_FILE"
+
+rm "$TMP_FILE"
