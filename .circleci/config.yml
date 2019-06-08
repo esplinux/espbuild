@@ -19,13 +19,12 @@ jobs:
       - run: export | grep VERSION > ~/versions.txt
       - run: mkdir -p ~/workspace/bin
       - run: cp /root/go/bin/ghr ~/workspace/bin
-      - run: ~/go/bin/ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ~/versions.txt
       - persist_to_workspace:
           root: ~/workspace
           paths: 
             - bin
 
-  espbuild-static:
+  espbuild:
     executor: alpine
     steps:
       - run: apk add ca-certificates libarchive-tools go git clang build-base
@@ -45,34 +44,12 @@ jobs:
             cp ~/build_index ~/build/bin
             cp ~/super_chroot ~/build/bin
             bsdtar cvfz ~/espbuild-static.tar.gz -C ~/build .
-            ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild-static.tar.gz
-
-  espbuild:
-    executor: alpine
-    steps:
-      - run: apk add ca-certificates libarchive-tools go git build-base
-      - checkout
-      - attach_workspace:
-          at: ~/workspace
-      - run:
-          name: Build
-          command: |
-            export PATH=~/workspace/bin:$PATH
-            go get go.starlark.net/starlark
-            go build espbuild.go
-            mkdir -p ~/build/bin
-            cp ~/espbuild ~/build/bin
-            cp ~/build_index ~/build/bin
-            bsdtar cvfz ~/espbuild.tar.gz -C ~/build .
-            ghr -prerelease -replace -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} ${VERSION} ~/espbuild.tar.gz
+            ghr -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -delete ${VERSION} ~/espbuild-static.tar.gz
 
 workflows:
   build:
     jobs:
       - prepare
-      - espbuild-static:
-          requires:
-            - prepare
       - espbuild:
           requires:
             - prepare
