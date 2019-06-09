@@ -113,15 +113,11 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
     } else if command == "git" {
       url := toString( kwargs[0].Index(1) )
 
-      if subCommand == "commit" {
-        commit := toString( kwargs[1].Index(1) )
-        shell("git clone " + url + " src")
-        shell("cd src; git reset --hard " + commit)
-      } else if subCommand == "branch" {
+      if subCommand == "branch" {
         branch := toString( kwargs[1].Index(1) )
-        shell("git clone --branch " + branch + " --depth 1 " + url + " src")
+        shell("git clone --branch " + branch + " --depth 1 " + url)
       } else {
-        shell("git clone " + url + " src")
+        shell("git clone " + url)
       }
     } else {
       for index, element := range kwargs {
@@ -147,7 +143,7 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
     depCommand := "echo " + toString(args.Index(i)) + " | xargs -n1 " + dependencyProg
     shell(depCommand)
   }
-  
+
   return starlark.None, nil
 }
 
@@ -175,7 +171,7 @@ func main() {
     if os.Args[2] == "--nodeps" {
       println("Dependencies disabled")
       dependencyProg = "echo"
-    } 
+    }
   }
 
   thread := &starlark.Thread{
