@@ -109,7 +109,7 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
     if command == "url" {
       url := toString( kwargs[0].Index(1) )
       shell("mkdir src")
-      shell("curl -L " + url + " | tar xf")
+      shell("curl -L " + url + " | gunzip | tar x")
     } else if command == "git" {
       url := toString( kwargs[0].Index(1) )
 
