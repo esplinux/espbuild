@@ -108,8 +108,12 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
 
     if command == "url" {
       url := toString( kwargs[0].Index(1) )
-      shell("mkdir src")
-      shell("curl -L " + url + " | gunzip | tar x")
+      if _, err := os.Stat("/bin/bsdtar"); err == nil {
+        shell("curl -L " + url + " | bsdtar -xf -")
+      } else {
+        shell("curl -LO " + url)
+        shell("basename " + url + " | xargs tar xf")
+      }
     } else if command == "git" {
       url := toString( kwargs[0].Index(1) )
 
