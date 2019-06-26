@@ -151,12 +151,39 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
   return starlark.None, nil
 }
 
+func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+  if args.Len() < 1 || len(kwargs) != 0 {
+    log.Fatalf("%s-%s: requires at least a single string argument", thread.Name, b.Name())
+  }
+
+  sourceDir := toString(args[0])
+  packageDir := "package"
+  name := os.Getenv("NAME")
+  version := os.Getenv("VERSION")
+
+  if args.Len() >1 {
+    packageDir = toString(args[1])
+  }
+
+  shell("mkdir " + packageDir)
+  shell("bsdtar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
+  shell("echo " + name + "_VERSION=" + version + " > " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_FILE=$NAME-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_SHA1=$(sha1sum " + packageDir +"/$NAME-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_URL=\"https://github.com/esplinux-core/$NAME/releases/download\" >> " + packageDir + "/$NAME.manifest")
+
+  return starlark.None, nil
+}
+
 func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 || len(kwargs) !=0 {
     log.Fatalf("%s-%s: requires a single string argument", thread.Name, b.Name())
   }
 
-  os.Setenv(strings.ToUpper(b.Name()), toString(args[0]))
+  err := os.Setenv(strings.ToUpper(b.Name()), toString(args[0]))
+  if err != nil {
+    log.Fatal(err)
+  }
 
   return starlark.None, nil
 }
@@ -202,8 +229,9 @@ func main() {
     "config": starlark.NewBuiltin("config", shellBuiltIn),
     "build": starlark.NewBuiltin("build", shellBuiltIn),
     "install": starlark.NewBuiltin("install", shellBuiltIn),
-    "package": starlark.NewBuiltin("package", shellBuiltIn),
+    "package": starlark.NewBuiltin("package", packageBuiltIn),
     "post": starlark.NewBuiltin("post", shellBuiltIn),
+    "shell": starlark.NewBuiltin("shell", shellBuiltIn),
   }
 
   _, err := starlark.ExecFile(thread, script, nil, predeclared)
