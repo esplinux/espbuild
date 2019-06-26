@@ -157,7 +157,7 @@ func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
   }
 
   log.Fatalf("ENV %s=%s", b.Name(), toString(args[0]))
-  os.Setenv(b.Name(), toString(args[0]))
+  os.Setenv(strings.ToUpper(b.Name()), toString(args[0]))
 
   return starlark.None, nil
 }
