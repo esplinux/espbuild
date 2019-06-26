@@ -2,13 +2,11 @@ package main
 
 import "go.starlark.net/starlark"
 
-import "bufio"
 import "fmt"
 import "log"
 import "os"
 import "os/exec"
 import "strings"
-import "sync"
 
 const packageDir = "packages"
 var dependencyProg string
@@ -43,12 +41,7 @@ func Start(args ...string) (p *os.Process, err error) {
   return nil, err
 }
 
-func exe(args ...string) {
-  //cmd := exec.Command(command, arg)
-  //if err := cmd.Start(); err != nil {
-  //  log.Fatal("EXE: Unable to start command ", err)
-  //}
-
+func shell(args ...string) {
   if proc, err := Start(args...); err == nil {
     _, err := proc.Wait()
     if err != nil {
@@ -59,6 +52,7 @@ func exe(args ...string) {
   }
 }
 
+/**
 func shell(arg string) {
   var wg sync.WaitGroup
 
@@ -116,7 +110,7 @@ func shell(arg string) {
   if err := cmd.Wait(); err != nil {
     log.Fatal("Error during wait", err)
   }
-}
+}**/
 
 func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 || len(kwargs) !=0 {
@@ -272,7 +266,7 @@ func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 func main() {
   fmt.Printf("ESPBuild\n")
 
-  exe("/bin/ls", "-al")
+  shell("/bin/ls", "-al")
 
   if _, err := os.Stat("/etc/esp-release"); err == nil {
     // esp based system
