@@ -12,6 +12,7 @@ import "sync"
 
 const packageDir = "packages"
 var dependencyProg string
+var verbose = true
 
 func toString(arg starlark.Value) string {
   argStr,isString := starlark.AsString( arg )
@@ -25,7 +26,7 @@ func toString(arg starlark.Value) string {
 func setEnv(name string, value string) {
   err := os.Setenv(name, value)
   if err != nil {
-    log.Fatal(err)
+    log.Fatal("Unable to set environment", err)
   }
 }
 
@@ -36,15 +37,15 @@ func shell(arg string) {
 
   stdout, err := cmd.StdoutPipe()
   if err != nil {
-    log.Fatal(err)
+    log.Fatal("Unable to get StdoutPipe", err)
   }
   stderr, err := cmd.StderrPipe()
   if err != nil {
-    log.Fatal(err)
+    log.Fatal("Unable to get StderrPipe", err)
   }
 
   if err := cmd.Start(); err != nil {
-    log.Fatal(err)
+    log.Fatal("Unable to start command", err)
   }
 
   outch := make(chan string, 10)
@@ -84,13 +85,17 @@ func shell(arg string) {
   }
 
   if err := cmd.Wait(); err != nil {
-    log.Fatal(err)
+    log.Fatal("Error during wait", err)
   }
 }
 
 func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 || len(kwargs) !=0 {
     log.Fatalf("%s-%s: requires a single string argument", thread.Name, b.Name())
+  }
+
+  if verbose {
+    fmt.Printf("shell(%s)\n", toString(args[0]) )
   }
 
   shell( toString(args[0]) )
@@ -101,6 +106,10 @@ func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 && len(kwargs) < 1 {
     log.Fatalf("%s-%s: requires one or more arguments", thread.Name, b.Name())
+  }
+
+  if verbose {
+    fmt.Printf("checkout()\n")
   }
 
   if args.Len() > 0 {
@@ -152,6 +161,10 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
   }
 
   for i := 0; i < args.Len(); i++ {
+    if verbose {
+      fmt.Printf("dependencies(%s)\n", toString(args.Index(i)))
+    }
+
     depCommand := "echo " + toString(args.Index(i)) + " | xargs -n1 " + dependencyProg
     shell(depCommand)
   }
@@ -167,6 +180,10 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
   name := os.Getenv("NAME")
   version := os.Getenv("VERSION")
   sourceDir := name
+
+  if verbose {
+    fmt.Printf("package(%s, %s, %s)\n", name, version, sourceDir)
+  }
 
   if args.Len() > 0 {
     sourceDir = toString(args[0])
@@ -191,6 +208,11 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
   name := toString(args[0])
   sourceDir := name
 
+  if verbose {
+    fmt.Printf("subPackage(%s, %s)\n", name, sourceDir)
+  }
+
+
   if args.Len() > 1 {
     sourceDir = toString(args[1])
   }
@@ -207,6 +229,10 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
 func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 || len(kwargs) !=0 {
     log.Fatalf("%s-%s: requires a single string argument", thread.Name, b.Name())
+  }
+
+  if verbose {
+    fmt.Printf("env(%s,%s)\n", strings.ToUpper(b.Name()), toString(args[0]))
   }
 
   setEnv(strings.ToUpper(b.Name()), toString(args[0]))
@@ -229,7 +255,9 @@ func main() {
     log.Fatal("Unable to determine underlying system")
   }
 
-  fmt.Printf("Dependency program: %s\n", dependencyProg)
+  if verbose {
+    fmt.Printf("Dependency program: %s\n", dependencyProg)
+  }
 
   if len(os.Args) < 2 {
     log.Fatal("You must supply the config file to build")
@@ -237,16 +265,19 @@ func main() {
 
   script := os.Args[1]
 
-  fmt.Printf("script: %s\n", script)
+  if verbose {
+    fmt.Printf("script: %s\n", script)
+  }
 
   if len(os.Args) > 2 {
-    if os.Args[2] == "--nodeps" {
-      println("Dependencies disabled")
-      dependencyProg = "echo"
+    if os.Args[2] == "--verbose" {
+      verbose = true
     }
   }
 
-  fmt.Printf("Create thread...\n")
+  if verbose {
+    fmt.Printf("Create thread...\n")
+  }
 
   thread := &starlark.Thread{
 	  Name: "espbuild",
