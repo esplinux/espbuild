@@ -41,13 +41,15 @@ func Start(args ...string) (p *os.Process, err error) {
 }
 
 func shell(args ...string) {
+  args = append([]string{"/bin/sh", "-xec"}, args...)
+
   if proc, err := Start(args...); err == nil {
     _, err := proc.Wait()
     if err != nil {
-      log.Fatal("EXE: Error during wait ", err)
+      log.Fatal("shell: Error during wait ", err)
     }
   } else {
-    log.Fatal("EXE: Unable to run command ", err)
+    log.Fatal("shell: Unable to run command ", err)
   }
 }
 
@@ -188,8 +190,7 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
     }
 
     depCommand := "echo " + toString(args.Index(i)) + " | xargs -n1 " + dependencyProg
-    //shell(depCommand)
-    shell("/bin/sh", "-xec", depCommand)
+    shell(depCommand)
   }
 
   return starlark.None, nil
@@ -265,8 +266,6 @@ func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 
 func main() {
   fmt.Printf("ESPBuild\n")
-
-  //shell("ls", "-al")
 
   if _, err := os.Stat("/etc/esp-release"); err == nil {
     // esp based system
