@@ -13,8 +13,8 @@ steps:
   - mkdir -p package/bin
   - cp build_index package/bin
   - apk add ca-certificates go git build-base clang
-  - cp uchroot package/bin
   - clang --static -Os uchroot.c -o uchroot
+  - cp uchroot package/bin
   - go get go.starlark.net/starlark
   - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
   - cp espbuild package/bin
