@@ -30,6 +30,14 @@ func setEnv(name string, value string) {
   }
 }
 
+func exe(command string, arg string) {
+  cmd := exec.Command(command, arg)
+  if err := cmd.Start(); err != nil {
+    log.Fatal("EXE: Unable to start command ", err)
+  }
+
+}
+
 func shell(arg string) {
   var wg sync.WaitGroup
 
@@ -37,15 +45,15 @@ func shell(arg string) {
 
   stdout, err := cmd.StdoutPipe()
   if err != nil {
-    log.Fatal("Unable to get StdoutPipe", err)
+    log.Fatal("Unable to get StdoutPipe ", err)
   }
   stderr, err := cmd.StderrPipe()
   if err != nil {
-    log.Fatal("Unable to get StderrPipe", err)
+    log.Fatal("Unable to get StderrPipe ", err)
   }
 
   if err := cmd.Start(); err != nil {
-    log.Fatal("Unable to start command", err)
+    log.Fatal("Unable to start command ", err)
   }
 
   outch := make(chan string, 10)
@@ -242,6 +250,8 @@ func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 
 func main() {
   fmt.Printf("ESPBuild\n")
+
+  exe("/bin/ls", "-al")
 
   if _, err := os.Stat("/etc/esp-release"); err == nil {
     // esp based system
