@@ -189,8 +189,7 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
       fmt.Printf("dependencies(%s)\n", toString(args.Index(i)))
     }
 
-    depCommand := "echo " + toString(args.Index(i)) + " | xargs -n1 " + dependencyProg
-    shell(depCommand)
+    shell(dependencyProg + " " + toString(args.Index(i)))
   }
 
   return starlark.None, nil
