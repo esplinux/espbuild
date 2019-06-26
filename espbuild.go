@@ -151,6 +151,17 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
   return starlark.None, nil
 }
 
+func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+  if args.Len() < 1 || len(kwargs) !=0 {
+    log.Fatalf("%s-%s: requires a single string argument", thread.Name, b.Name())
+  }
+
+  log.Fatalf("ENV %s=%s", b.Name(), toString(args[0]))
+  os.Setenv(b.Name(), toString(args[0]))
+
+  return starlark.None, nil
+}
+
 func main() {
 
   if _, err := os.Stat("/etc/esp-release"); err == nil {
@@ -183,6 +194,8 @@ func main() {
   }
 
   predeclared := starlark.StringDict{
+    "name": starlark.NewBuiltin("name", envBuiltIn),
+    "version": starlark.NewBuiltin("version", envBuiltIn),
     "dependencies": starlark.NewBuiltin("dependencies", dependenciesBuiltIn),
     "pre": starlark.NewBuiltin("pre", shellBuiltIn),
     "checkout": starlark.NewBuiltin("checkout", checkoutBuiltIn),
