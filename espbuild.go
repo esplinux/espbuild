@@ -30,12 +30,33 @@ func setEnv(name string, value string) {
   }
 }
 
-func exe(command string, arg string) {
-  cmd := exec.Command(command, arg)
-  if err := cmd.Start(); err != nil {
-    log.Fatal("EXE: Unable to start command ", err)
+func Start(args ...string) (p *os.Process, err error) {
+  if args[0], err = exec.LookPath(args[0]); err == nil {
+    var procAttr os.ProcAttr
+    procAttr.Files = []*os.File{os.Stdin,
+      os.Stdout, os.Stderr}
+    p, err := os.StartProcess(args[0], args, &procAttr)
+    if err == nil {
+      return p, nil
+    }
   }
+  return nil, err
+}
 
+func exe(args ...string) {
+  //cmd := exec.Command(command, arg)
+  //if err := cmd.Start(); err != nil {
+  //  log.Fatal("EXE: Unable to start command ", err)
+  //}
+
+  if proc, err := Start(args...); err == nil {
+    _, err := proc.Wait()
+    if err != nil {
+      log.Fatal("EXE: Error during wait ", err)
+    }
+  } else {
+    log.Fatal("EXE: Unable to run command ", err)
+  }
 }
 
 func shell(arg string) {
