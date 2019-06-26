@@ -1,0 +1,26 @@
+kind: pipeline
+name: default
+
+steps:
+- name: build
+  image: alpine:3.10
+  environment:
+    RELEASE: "0.01"
+    GHR_VERSION: "0.12.1"
+    GITHUB_TOKEN:
+      from_secret: github_token
+  commands:
+  - apk add ca-certificates go git build-base
+  - go get go.starlark.net/starlark
+  - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
+  - mkdir -p package/bin
+  - cp espbuild package/bin
+  - cp build_index package/bin
+  - tar cfz espbuild-static.tar.gz -C package .
+  - go mod init .
+  - go get github.com/tcnksm/ghr@v${GHR_VERSION}
+  - ~/go/bin/ghr -u $DRONE_REPO_OWNER -r $DRONE_REPO_NAME -c $DRONE_COMMIT_SHA -delete $RELEASE espbuild-static.tar.gz
+
+trigger:
+  event:
+  - push
