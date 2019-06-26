@@ -202,33 +202,11 @@ func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 }
 
 func main() {
-  fmt.Printf("ESPBuild\n")
-
-  if _, err := os.Stat("/etc/esp-release"); err == nil {
-    // esp based system
-    dependencyProg = "/bin/esp add"
-
-  } else if os.IsNotExist(err) {
-    // Assume apk based system
-    dependencyProg = "/sbin/apk add"
-
-  } else {
-    log.Fatal("Unable to determine underlying system")
-  }
-
-  if verbose {
-    fmt.Printf("Dependency program: %s\n", dependencyProg)
-  }
-
   if len(os.Args) < 2 {
     log.Fatal("You must supply the config file to build")
   }
 
   script := os.Args[1]
-
-  if verbose {
-    fmt.Printf("script: %s\n", script)
-  }
 
   if len(os.Args) > 2 {
     if os.Args[2] == "--verbose" {
@@ -236,15 +214,23 @@ func main() {
     }
   }
 
+  if _, err := os.Stat("/etc/esp-release"); err == nil {
+    // esp based system
+    dependencyProg = "/bin/esp add"
+  } else if os.IsNotExist(err) {
+    // Assume apk based system
+    dependencyProg = "/sbin/apk add"
+  } else {
+    log.Fatal("Unable to determine underlying system")
+  }
+
   if verbose {
-    fmt.Printf("Create thread...\n")
+    fmt.Printf("Dependency command: %s\n", dependencyProg)
   }
 
   thread := &starlark.Thread{
 	  Name: "espbuild",
   }
-
-  fmt.Printf("Create predecls...\n")
 
   predeclared := starlark.StringDict{
     "name": starlark.NewBuiltin("name", envBuiltIn),
@@ -261,8 +247,6 @@ func main() {
     "post": starlark.NewBuiltin("post", shellBuiltIn),
     "shell": starlark.NewBuiltin("shell", shellBuiltIn),
   }
-
-  fmt.Printf("Run...\n")
 
   _, err := starlark.ExecFile(thread, script, nil, predeclared)
 
