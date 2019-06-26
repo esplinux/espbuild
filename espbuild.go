@@ -10,7 +10,7 @@ import "strings"
 
 const packageDir = "packages"
 var dependencyProg string
-var verbose = true
+var verbose = false
 
 func toString(arg starlark.Value) string {
   argStr,isString := starlark.AsString( arg )
