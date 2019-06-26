@@ -10,6 +10,7 @@ import "os/exec"
 import "strings"
 import "sync"
 
+const packageDir = "packages"
 var dependencyProg string
 
 func toString(arg starlark.Value) string {
@@ -18,6 +19,13 @@ func toString(arg starlark.Value) string {
     return argStr
   } else {
     return ""
+  }
+}
+
+func setEnv(name string, value string) {
+  err := os.Setenv(name, value)
+  if err != nil {
+    log.Fatal(err)
   }
 }
 
@@ -157,15 +165,10 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
   }
 
   sourceDir := toString(args[0])
-  packageDir := "package"
   name := os.Getenv("NAME")
   version := os.Getenv("VERSION")
 
-  if args.Len() >1 {
-    packageDir = toString(args[1])
-  }
-
-  shell("mkdir " + packageDir)
+  shell("mkdir -p " + packageDir)
   shell("bsdtar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
   shell("echo " + name + "_VERSION=" + version + " > " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_FILE=$NAME-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
@@ -175,15 +178,34 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
   return starlark.None, nil
 }
 
+func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+  if args.Len() < 1 || len(kwargs) != 0 {
+    log.Fatalf("%s-%s: requires at least a single string argument", thread.Name, b.Name())
+  }
+
+  //parentName := os.Getenv("NAME")
+  name := toString(args[1])
+  sourceDir := name
+
+  if args.Len() > 1 {
+    sourceDir = toString(args[2])
+  }
+
+  shell("mkdir -p " + packageDir)
+  shell("bsdtar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
+  shell("echo " + name + "_FILE=" + name + "-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_SHA1=$(sha1sum " + packageDir +"/" + name + "-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_BASE=$NAME >> " + packageDir + "/$NAME.manifest")
+
+  return starlark.None, nil
+}
+
 func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 || len(kwargs) !=0 {
     log.Fatalf("%s-%s: requires a single string argument", thread.Name, b.Name())
   }
 
-  err := os.Setenv(strings.ToUpper(b.Name()), toString(args[0]))
-  if err != nil {
-    log.Fatal(err)
-  }
+  setEnv(strings.ToUpper(b.Name()), toString(args[0]))
 
   return starlark.None, nil
 }
@@ -230,6 +252,7 @@ func main() {
     "build": starlark.NewBuiltin("build", shellBuiltIn),
     "install": starlark.NewBuiltin("install", shellBuiltIn),
     "package": starlark.NewBuiltin("package", packageBuiltIn),
+    "subpackage": starlark.NewBuiltin("package", subPackageBuiltIn),
     "post": starlark.NewBuiltin("post", shellBuiltIn),
     "shell": starlark.NewBuiltin("shell", shellBuiltIn),
   }
