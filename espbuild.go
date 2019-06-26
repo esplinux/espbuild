@@ -31,8 +31,7 @@ func setEnv(name string, value string) {
 func Start(args ...string) (p *os.Process, err error) {
   if args[0], err = exec.LookPath(args[0]); err == nil {
     var procAttr os.ProcAttr
-    procAttr.Files = []*os.File{os.Stdin,
-      os.Stdout, os.Stderr}
+    procAttr.Files = []*os.File{os.Stdin, os.Stdout, os.Stderr}
     p, err := os.StartProcess(args[0], args, &procAttr)
     if err == nil {
       return p, nil
@@ -189,7 +188,8 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
     }
 
     depCommand := "echo " + toString(args.Index(i)) + " | xargs -n1 " + dependencyProg
-    shell(depCommand)
+    //shell(depCommand)
+    shell("/bin/sh", "-xec", depCommand)
   }
 
   return starlark.None, nil
@@ -266,7 +266,7 @@ func envBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 func main() {
   fmt.Printf("ESPBuild\n")
 
-  shell("/bin/ls", "-al")
+  //shell("ls", "-al")
 
   if _, err := os.Stat("/etc/esp-release"); err == nil {
     // esp based system
