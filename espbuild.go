@@ -160,13 +160,18 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
 }
 
 func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-  if args.Len() < 1 || len(kwargs) != 0 {
-    log.Fatalf("%s-%s: requires at least a single string argument", thread.Name, b.Name())
+  if args.Len() > 1 || len(kwargs) != 0 {
+    log.Fatalf("%s-%s: requires one or less arguments", thread.Name, b.Name())
   }
 
-  sourceDir := toString(args[0])
   name := os.Getenv("NAME")
   version := os.Getenv("VERSION")
+  sourceDir := name
+
+  if args.Len() > 0 {
+    sourceDir = toString(args[0])
+  }
+
 
   shell("mkdir -p " + packageDir)
   shell("bsdtar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
@@ -183,12 +188,11 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
     log.Fatalf("%s-%s: requires at least a single string argument", thread.Name, b.Name())
   }
 
-  //parentName := os.Getenv("NAME")
-  name := toString(args[1])
+  name := toString(args[0])
   sourceDir := name
 
   if args.Len() > 1 {
-    sourceDir = toString(args[2])
+    sourceDir = toString(args[1])
   }
 
   shell("mkdir -p " + packageDir)
