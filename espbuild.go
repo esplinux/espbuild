@@ -44,74 +44,16 @@ func shell(args ...string) {
   args = append([]string{"/bin/sh", "-xec"}, args...)
 
   if proc, err := Start(args...); err == nil {
-    _, err := proc.Wait()
+    processState, err := proc.Wait()
     if err != nil {
       log.Fatal("shell: Error during wait ", err)
+    } else if processState.ExitCode() != 0 {
+      log.Fatal("shell: Exited with non zero status")
     }
   } else {
     log.Fatal("shell: Unable to run command ", err)
   }
 }
-
-/**
-func shell(arg string) {
-  var wg sync.WaitGroup
-
-  cmd := exec.Command("/bin/sh", "-xec", arg)
-
-  stdout, err := cmd.StdoutPipe()
-  if err != nil {
-    log.Fatal("Unable to get StdoutPipe ", err)
-  }
-  stderr, err := cmd.StderrPipe()
-  if err != nil {
-    log.Fatal("Unable to get StderrPipe ", err)
-  }
-
-  if err := cmd.Start(); err != nil {
-    log.Fatal("Unable to start command ", err)
-  }
-
-  outch := make(chan string, 10)
-
-  scannerStdout := bufio.NewScanner(stdout)
-  scannerStdout.Split(bufio.ScanLines)
-  wg.Add(1)
-  go func() {
-    for scannerStdout.Scan() {
-        text := scannerStdout.Text()
-        if strings.TrimSpace(text) != "" {
-            outch <- text
-        }
-    }
-    wg.Done()
-  }()
-  scannerStderr := bufio.NewScanner(stderr)
-  scannerStderr.Split(bufio.ScanLines)
-  wg.Add(1)
-  go func() {
-    for scannerStderr.Scan() {
-        text := scannerStderr.Text()
-        if strings.TrimSpace(text) != "" {
-            outch <- text
-        }
-    }
-    wg.Done()
-  }()
-
-  go func() {
-    wg.Wait()
-    close(outch)
-  }()
-
-  for t := range outch {
-    fmt.Println(t)
-  }
-
-  if err := cmd.Wait(); err != nil {
-    log.Fatal("Error during wait", err)
-  }
-}**/
 
 func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
   if args.Len() < 1 || len(kwargs) !=0 {
