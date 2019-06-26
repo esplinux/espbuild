@@ -10,12 +10,14 @@ steps:
     GITHUB_TOKEN:
       from_secret: github_token
   commands:
-  - apk add ca-certificates go git build-base
+  - mkdir -p package/bin
+  - cp build_index package/bin
+  - apk add ca-certificates go git build-base clang
+  - cp uchroot package/bin
+  - clang --static -Os uchroot.c -o uchroot
   - go get go.starlark.net/starlark
   - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
-  - mkdir -p package/bin
   - cp espbuild package/bin
-  - cp build_index package/bin
   - tar cfz espbuild-static.tar.gz -C package .
   - go mod init .
   - go get github.com/tcnksm/ghr@v$GHR_VERSION
