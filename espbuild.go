@@ -185,10 +185,6 @@ func dependenciesBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args star
   }
 
   for i := 0; i < args.Len(); i++ {
-    if verbose {
-      fmt.Printf("dependencies(%s)\n", toString(args.Index(i)))
-    }
-
     shell(dependencyProg + " " + toString(args.Index(i)))
   }
 
