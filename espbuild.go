@@ -95,7 +95,7 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
         shell("curl -#L " + url + " | bsdtar -xf -")
       } else {
         shell("curl -#LO " + url)
-        shell("basename " + url + " | xargs tar xf")
+        shell("tar xf $(basename " + url + ")")
       }
     } else if command == "git" {
       url := toString( kwargs[0].Index(1) )
@@ -152,7 +152,7 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
 
 
   shell("mkdir -p " + packageDir)
-  shell("bsdtar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
+  shell("tar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
   shell("echo " + name + "_VERSION=" + version + " > " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_FILE=$NAME-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA1=$(sha1sum " + packageDir +"/$NAME-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
@@ -179,7 +179,7 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
   }
 
   shell("mkdir -p " + packageDir)
-  shell("bsdtar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
+  shell("tar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
   shell("echo " + name + "_FILE=" + name + "-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA1=$(sha1sum " + packageDir +"/" + name + "-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_BASE=$NAME >> " + packageDir + "/$NAME.manifest")
