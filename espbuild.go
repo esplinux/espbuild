@@ -152,7 +152,7 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
 
 
   shell("mkdir -p " + packageDir)
-  shell("tar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 -c " + sourceDir + " .")
+  shell("tar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 -C " + sourceDir + " .")
   shell("echo " + name + "_VERSION=" + version + " > " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_FILE=$NAME-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA1=$(sha1sum " + packageDir +"/$NAME-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
