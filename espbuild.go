@@ -166,7 +166,7 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
   }
 
   name := toString(args[0])
-  sourceDir = toString(args[1])
+  sourceDir := toString(args[1])
 
   if verbose {
     fmt.Printf("subPackage(%s, %s)\n", name, sourceDir)
