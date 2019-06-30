@@ -18,10 +18,10 @@ steps:
   - go get go.starlark.net/starlark
   - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
   - cp espbuild package/bin
-  - tar cfz espbuild-static.tar.gz -C package .
+  - tar cfj espbuild-static.tar.bz2 -C package .
   - go mod init .
   - go get github.com/tcnksm/ghr@v$GHR_VERSION
-  - ~/go/bin/ghr -u $DRONE_REPO_OWNER -r $DRONE_REPO_NAME -c $DRONE_COMMIT_SHA -delete $RELEASE espbuild-static.tar.gz
+  - ~/go/bin/ghr -u $DRONE_REPO_OWNER -r $DRONE_REPO_NAME -c $DRONE_COMMIT_SHA -delete $RELEASE espbuild-static.tar.bz2
 
 trigger:
   event:
