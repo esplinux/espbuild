@@ -37,5 +37,6 @@ int main(int argc, char **argv)
   chdir(argv[1]);
   mount("/dev", "./dev", 0, MS_BIND|MS_REC, 0);
   chroot(".");
+
   execv(argv[2], argv+2);
 }

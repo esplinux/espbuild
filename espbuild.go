@@ -177,7 +177,7 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
   }
 
   shell("mkdir -p " + packageDir)
-  shell("tar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
+  shell("tar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 -C " + sourceDir + " .")
   shell("echo " + name + "_FILE=" + name + "-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA256=$(sha256sum " + packageDir +"/" + name + "-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_BASE=$NAME >> " + packageDir + "/$NAME.manifest")
