@@ -140,23 +140,22 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
 
   name := os.Getenv("NAME")
   version := os.Getenv("VERSION")
-  sourceDir := name
-
-  if verbose {
-    fmt.Printf("package(%s, %s, %s)\n", name, version, sourceDir)
-  }
+  sourceDir := "build-" + name
 
   if args.Len() > 0 {
     sourceDir = toString(args[0])
   }
 
+  if verbose {
+    fmt.Printf("package(%s, %s, %s)\n", name, version, sourceDir)
+  }
 
   shell("mkdir -p " + packageDir)
   shell("tar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 -C " + sourceDir + " .")
   shell("echo " + name + "_VERSION=" + version + " > " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_FILE=$NAME-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
-  shell("echo " + name + "_SHA1=$(sha1sum " + packageDir +"/$NAME-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
-  shell("echo " + name + "_URL=\"https://github.com/esplinux-core/$NAME/releases/download\" >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_SHA256=$(sha256sum " + packageDir +"/$NAME-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_URL=\"/esplinux/core/releases/download\" >> " + packageDir + "/$NAME.manifest")
 
   return starlark.None, nil
 }
@@ -167,21 +166,16 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
   }
 
   name := toString(args[0])
-  sourceDir := name
+  sourceDir = toString(args[1])
 
   if verbose {
     fmt.Printf("subPackage(%s, %s)\n", name, sourceDir)
   }
 
-
-  if args.Len() > 1 {
-    sourceDir = toString(args[1])
-  }
-
   shell("mkdir -p " + packageDir)
   shell("tar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 --strip-components=1 " + sourceDir)
   shell("echo " + name + "_FILE=" + name + "-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
-  shell("echo " + name + "_SHA1=$(sha1sum " + packageDir +"/" + name + "-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_SHA256=$(sha256sum " + packageDir +"/" + name + "-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_BASE=$NAME >> " + packageDir + "/$NAME.manifest")
 
   return starlark.None, nil
