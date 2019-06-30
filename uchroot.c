@@ -13,7 +13,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <sys/mount.h>
+//#include <sys/mount.h>
 
 int main(int argc, char **argv)
 {
@@ -35,7 +35,7 @@ int main(int argc, char **argv)
   close(fd);
 
   chdir(argv[1]);
-  mount("/dev", "./dev", 0, MS_BIND|MS_REC, 0);
-  chroot(".");
+//  mount("/dev", "./dev", 0, MS_BIND|MS_REC, 0);
+//  chroot(".");
   execv(argv[2], argv+2);
 }
