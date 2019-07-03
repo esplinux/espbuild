@@ -153,7 +153,7 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
   shell("mkdir -p " + packageDir)
   shell("tar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 -C " + sourceDir + " .")
   shell("echo " + name + "_VERSION=" + version + " > " + packageDir + "/$NAME.manifest")
-  shell("echo " + name + "_FILE=$NAME-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_FILE=$NAME-$VERSION.tar.bz2 >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA256=$(sha256sum " + packageDir +"/$NAME-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_URL=\"/esplinux/core/releases/download\" >> " + packageDir + "/$NAME.manifest")
 
@@ -178,7 +178,7 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
 
   shell("mkdir -p " + packageDir)
   shell("tar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 -C " + sourceDir + " .")
-  shell("echo " + name + "_FILE=" + name + "-$VERSION.tar.gz >> " + packageDir + "/$NAME.manifest")
+  shell("echo " + name + "_FILE=" + name + "-$VERSION.tar.bz2 >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA256=$(sha256sum " + packageDir +"/" + name + "-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_BASE=$NAME >> " + packageDir + "/$NAME.manifest")
 
