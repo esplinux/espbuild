@@ -102,9 +102,9 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
 
       if subCommand == "branch" {
         branch := toString( kwargs[1].Index(1) )
-        shell("git clone --branch " + branch + " --depth 1 " + url)
+        shell("git clone --branch " + branch + " --depth 1 " + url + " src")
       } else {
-        shell("git clone " + url)
+        shell("git clone " + url + " src")
       }
     } else {
       for index, element := range kwargs {
