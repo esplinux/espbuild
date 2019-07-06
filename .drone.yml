@@ -15,7 +15,7 @@ steps:
   - apk add ca-certificates go git build-base clang
   - clang --static -Os uchroot.c -o uchroot
   - cp uchroot package/bin
-  - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go tar.go git.go
+  - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go git.go http.go tar.go
   - cp espbuild package/bin
   - tar cfj espbuild-static.tar.bz2 -C package .
   - go get github.com/tcnksm/ghr@v$GHR_VERSION

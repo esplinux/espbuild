@@ -7,16 +7,18 @@
 package main
 
 import (
-  "github.com/dsnet/compress/bzip2"
+	"github.com/dsnet/compress/bzip2"
+	"github.com/ulikunitz/xz"
 )
 
+import "compress/gzip"
 import "archive/tar"
 import "bufio"
-import "compress/gzip"
 import "fmt"
 import "io"
 import "log"
 import "os"
+import "path"
 import "path/filepath"
 import "strings"
 
@@ -24,6 +26,8 @@ import "strings"
 // creating the file structure at 'dst' along the way, and writing any files
 func untarReader(destination string, r io.Reader) error {
 
+
+	/**
 	gzr, err := gzip.NewReader(r)
 	if err != nil {
 		return err
@@ -37,6 +41,9 @@ func untarReader(destination string, r io.Reader) error {
 	}()
 
 	tr := tar.NewReader(gzr)
+	**/
+
+	tr := tar.NewReader(r)
 
 	for {
 		header, err := tr.Next()
@@ -97,15 +104,64 @@ func untarReader(destination string, r io.Reader) error {
 }
 
 func extractTar(src string, file string) error {
+
 	f, err := os.Open(file)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	w := bufio.NewReader(f)
 
-	err = untarReader(src, w)
-	if err != nil {
-		return err
+
+	var r io.Reader
+	fileExtension := path.Ext(file)
+
+	fmt.Printf("fileExtension: %s\n", fileExtension)
+
+	if fileExtension == ".gz" {
+		fmt.Printf("Creating gunzip reader\n")
+		r, err := gzip.NewReader(f)
+		if err != nil {
+			panic(err)
+		}
+
+		err = untarReader(src, r)
+		if err != nil {
+			panic(err)
+		}
+
+		err = r.Close()
+		if err != nil {
+			panic(err)
+		}
+	} else if fileExtension == ".bz2" {
+		fmt.Printf("Creating bunzip2 reader\n")
+		r, err = bzip2.NewReader(f, &bzip2.ReaderConfig{})
+		if err != nil {
+			panic(err)
+		}
+
+		err = untarReader(src, r)
+		if err != nil {
+			panic(err)
+		}
+	} else if fileExtension == ".xz" {
+		fmt.Printf("Creating xz reader\n")
+		r, err =  xz.NewReader(f)
+		if err != nil {
+			panic(err)
+		}
+
+		err = untarReader(src, r)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		fmt.Printf("Creating file reader\n")
+		r = bufio.NewReader(f)
+
+		err = untarReader(src, r)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	err = f.Close()

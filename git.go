@@ -1,8 +1,8 @@
 package main
 
 import (
-  "gopkg.in/src-d/go-git.v4"
-  "gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
 )
 
 import "log"
@@ -22,11 +22,11 @@ func cloneBranch(destination string, url string, branch string) error {
 	log.Print("Internal clone: " + url + " branch: " + branch)
 
 	_, err := git.PlainClone(destination, false, &git.CloneOptions{
-		URL:      url,
+		URL:           url,
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
-		Depth: 1,
-		SingleBranch: true,
-		Progress: os.Stdout,
+		Depth:         1,
+		SingleBranch:  true,
+		Progress:      os.Stdout,
 	})
 
 	return err
@@ -36,11 +36,11 @@ func cloneTag(destination string, url string, tag string) error {
 	log.Print("Internal clone: " + url + " tag: " + tag)
 
 	_, err := git.PlainClone(destination, false, &git.CloneOptions{
-		URL:      url,
+		URL:           url,
 		ReferenceName: plumbing.NewTagReferenceName(tag),
-		Depth: 1,
-		SingleBranch: true,
-		Progress: os.Stdout,
+		Depth:         1,
+		SingleBranch:  true,
+		Progress:      os.Stdout,
 	})
 
 	return err
