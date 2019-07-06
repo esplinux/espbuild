@@ -103,7 +103,10 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
 				panic(err)
 			}
 
-			extractTar(".", file)
+			err = extractTar(".", file)
+			if err != nil {
+				panic(err)
+			}
 		} else if command == "git" {
 			url := toString(kwargs[0].Index(1))
 

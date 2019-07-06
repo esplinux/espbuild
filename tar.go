@@ -79,6 +79,10 @@ func untarReader(destination string, r io.Reader) error {
 				if err := os.MkdirAll(target, 0755); err != nil {
 					return err
 				}
+				err = os.Chtimes(target, header.AccessTime, header.ModTime)
+				if err != nil {
+					return err
+				}
 			}
 
 		// if it's a file create it
@@ -96,6 +100,11 @@ func untarReader(destination string, r io.Reader) error {
 			// manually close here after each file operation; defering would cause each file close
 			// to wait until all operations have completed.
 			err = f.Close()
+			if err != nil {
+				return err
+			}
+
+			err = os.Chtimes(target, header.AccessTime, header.ModTime)
 			if err != nil {
 				return err
 			}
@@ -122,16 +131,25 @@ func extractTar(src string, file string) error {
 		if err != nil {
 			panic(err)
 		}
+		defer r.Close()
+
+		/**
+		tmpfile, err := ioutil.TempFile("", "temporary.*.tar")
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer os.Remove(tmpfile.Name()) // clean up
+
+		_, err = io.Copy(tmpfile, r)
+		if err != nil {
+			log.Fatal(err)
+		}**/
 
 		err = untarReader(src, r)
 		if err != nil {
 			panic(err)
 		}
 
-		err = r.Close()
-		if err != nil {
-			panic(err)
-		}
 	} else if fileExtension == ".bz2" {
 		fmt.Printf("Creating bunzip2 reader\n")
 		r, err = bzip2.NewReader(f, &bzip2.ReaderConfig{})
