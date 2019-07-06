@@ -15,8 +15,7 @@ steps:
   - apk add ca-certificates go git build-base clang
   - clang --static -Os uchroot.c -o uchroot
   - cp uchroot package/bin
-  - go get go.starlark.net/starlark
-  - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go
+  - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go tar.go git.go
   - cp espbuild package/bin
   - tar cfj espbuild-static.tar.bz2 -C package .
   - go mod init .

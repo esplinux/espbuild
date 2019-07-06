@@ -1,6 +1,8 @@
 package main
 
-import "go.starlark.net/starlark"
+import (
+  "go.starlark.net/starlark"
+)
 
 import "fmt"
 import "log"
@@ -101,10 +103,28 @@ func checkoutBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark
       url := toString( kwargs[0].Index(1) )
 
       if subCommand == "branch" {
-        branch := toString( kwargs[1].Index(1) )
-        shell("git clone --branch " + branch + " --depth 1 " + url + " src")
+        branch := toString(kwargs[1].Index(1))
+        err := cloneBranch("src", url, branch)
+        if err != nil {
+          log.Fatal(err)
+        }
+      } else if subCommand == "tag" {
+        tag := toString(kwargs[1].Index(1))
+        err := cloneTag("src", url, tag)
+        if err != nil {
+          log.Fatal(err)
+        }
+      } else if subCommand == "commit" {
+        commit := toString(kwargs[1].Index(1))
+        err := cloneCheckout("src", url, commit)
+        if err != nil {
+          log.Fatal(err)
+        }
       } else {
-        shell("git clone " + url + " src")
+        err := clone("src", url)
+        if err != nil {
+          log.Fatal(err)
+        }
       }
     } else {
       for index, element := range kwargs {
@@ -151,7 +171,13 @@ func packageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.
   }
 
   shell("mkdir -p " + packageDir)
-  shell("tar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 -C " + sourceDir + " .")
+
+  //shell("tar jcf " + packageDir + "/$NAME-$VERSION.tar.bz2 -C " + sourceDir + " .")
+  err := createTar(sourceDir, packageDir + "/" + name + "-" + version + ".tar.bz2")
+  if err != nil {
+    log.Fatal(err)
+  }
+
   shell("echo " + name + "_VERSION=" + version + " > " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_FILE=$NAME-$VERSION.tar.bz2 >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA256=$(sha256sum " + packageDir +"/$NAME-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
@@ -166,6 +192,7 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
   }
 
   name := toString(args[0])
+  version := os.Getenv("VERSION")
   sourceDir := "build-" + toString(args[0])
 
   if args.Len() > 1 {
@@ -177,7 +204,13 @@ func subPackageBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starla
   }
 
   shell("mkdir -p " + packageDir)
-  shell("tar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 -C " + sourceDir + " .")
+
+  //shell("tar jcf " + packageDir + "/" + name + "-$VERSION.tar.bz2 -C " + sourceDir + " .")
+  err := createTar(sourceDir, packageDir + "/" + name + "-" + version + ".tar.bz2")
+  if err != nil {
+    log.Fatal(err)
+  }
+
   shell("echo " + name + "_FILE=" + name + "-$VERSION.tar.bz2 >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_SHA256=$(sha256sum " + packageDir +"/" + name + "-$VERSION.tar.bz2 | cut -d' ' -f1) >> " + packageDir + "/$NAME.manifest")
   shell("echo " + name + "_BASE=$NAME >> " + packageDir + "/$NAME.manifest")
