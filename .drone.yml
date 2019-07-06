@@ -18,7 +18,6 @@ steps:
   - CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' espbuild.go tar.go git.go
   - cp espbuild package/bin
   - tar cfj espbuild-static.tar.bz2 -C package .
-  - go mod init .
   - go get github.com/tcnksm/ghr@v$GHR_VERSION
   - ~/go/bin/ghr -u $DRONE_REPO_OWNER -r $DRONE_REPO_NAME -c $DRONE_COMMIT_SHA -delete $RELEASE espbuild-static.tar.bz2
 
