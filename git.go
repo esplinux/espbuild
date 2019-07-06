@@ -24,6 +24,7 @@ func cloneBranch(destination string, url string, branch string) error {
 	_, err := git.PlainClone(destination, false, &git.CloneOptions{
 		URL:      url,
 		ReferenceName: plumbing.NewBranchReferenceName(branch),
+		Depth: 1,
 		SingleBranch: true,
 		Progress: os.Stdout,
 	})
@@ -37,6 +38,7 @@ func cloneTag(destination string, url string, tag string) error {
 	_, err := git.PlainClone(destination, false, &git.CloneOptions{
 		URL:      url,
 		ReferenceName: plumbing.NewTagReferenceName(tag),
+		Depth: 1,
 		SingleBranch: true,
 		Progress: os.Stdout,
 	})
