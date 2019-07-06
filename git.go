@@ -45,6 +45,7 @@ func cloneTag(destination string, url string, tag string) error {
 }
 
 func cloneCheckout(destination string, url string, commit string) error {
+
 	log.Print("Internal clone: " + url + " commit: " + commit)
 	ref, err := git.PlainClone(destination, false, &git.CloneOptions{
 		URL:      url,
@@ -54,15 +55,17 @@ func cloneCheckout(destination string, url string, commit string) error {
 		return err
 	}
 
+	log.Print("Getting worktree: " + url + " commit: " + commit)
 	wt, err := ref.Worktree()
 	if err != nil {
 		return err
 	}
 
-	// ... checking out to commit
+	log.Print("Checkout: " + url + " commit: " + commit)
 	err = wt.Checkout(&git.CheckoutOptions{
 		Hash: plumbing.NewHash(commit),
 	})
 
+	log.Print("Complete: " + url + " commit: " + commit)
 	return err
 }
