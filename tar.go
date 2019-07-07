@@ -11,9 +11,9 @@ import (
 	"github.com/ulikunitz/xz"
 )
 
-import "compress/gzip"
 import "archive/tar"
 import "bufio"
+import "compress/gzip"
 import "fmt"
 import "io"
 import "log"
@@ -25,23 +25,6 @@ import "strings"
 // Untar takes a destination path and a reader; a tar reader loops over the tarfile
 // creating the file structure at 'dst' along the way, and writing any files
 func untarReader(destination string, r io.Reader) error {
-
-
-	/**
-	gzr, err := gzip.NewReader(r)
-	if err != nil {
-		return err
-	}
-
-	//defer gzr.Close()
-	defer func() {
-		if err := gzr.Close(); err != nil {
-			log.Fatal(err)
-		}
-	}()
-
-	tr := tar.NewReader(gzr)
-	**/
 
 	tr := tar.NewReader(r)
 
@@ -119,7 +102,6 @@ func extractTar(src string, file string) error {
 		panic(err)
 	}
 
-
 	var r io.Reader
 	fileExtension := path.Ext(file)
 
@@ -131,19 +113,12 @@ func extractTar(src string, file string) error {
 		if err != nil {
 			panic(err)
 		}
-		defer r.Close()
 
-		/**
-		tmpfile, err := ioutil.TempFile("", "temporary.*.tar")
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer os.Remove(tmpfile.Name()) // clean up
-
-		_, err = io.Copy(tmpfile, r)
-		if err != nil {
-			log.Fatal(err)
-		}**/
+		defer func() {
+			if err := r.Close(); err != nil {
+				log.Fatal(err)
+			}
+		}()
 
 		err = untarReader(src, r)
 		if err != nil {
@@ -163,7 +138,7 @@ func extractTar(src string, file string) error {
 		}
 	} else if fileExtension == ".xz" {
 		fmt.Printf("Creating xz reader\n")
-		r, err =  xz.NewReader(f)
+		r, err = xz.NewReader(f)
 		if err != nil {
 			panic(err)
 		}
@@ -230,8 +205,15 @@ func tarWriter(source string, writers ...io.Writer) error {
 			return err
 		}
 
-		// create a new dir/file header
-		header, err := tar.FileInfoHeader(fi, fi.Name())
+		link := fi.Name()
+		if fi.Mode() == os.ModeSymlink {
+			link, err = os.Readlink(link)
+			if err != nil {
+				return err
+			}
+		}
+
+		header, err := tar.FileInfoHeader(fi, link)
 		if err != nil {
 			return err
 		}
