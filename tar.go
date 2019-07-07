@@ -205,9 +205,14 @@ func tarWriter(source string, writers ...io.Writer) error {
 			return err
 		}
 
+		fi, err = os.Lstat(file)
+		if err != nil {
+			return err
+		}
+
 		link := fi.Name()
-		if fi.Mode() == os.ModeSymlink {
-			link, err = os.Readlink(link)
+		if fi.Mode() & os.ModeSymlink != 0 { // check if Symlink bit set
+			link, err = os.Readlink(file)
 			if err != nil {
 				return err
 			}
