@@ -66,7 +66,7 @@ func main() {
   } else {
     switch os.Args[1] {
     case "git":
-      if len(os.Args) > 2 {
+      if len(os.Args) > 3 {
         getGit(os.Args[2], os.Args[3])
       } else {
         getGitInferred(os.Args[2])
