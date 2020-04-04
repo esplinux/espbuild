@@ -9,7 +9,7 @@ import "os"
 import "strings"
 import "time"
 
-import "gopkg.in/src-d/go-git.v4"
+import "github.com/go-git/go-git/v5"
 
 func getHttp(url string) {
 	urlSplit := strings.Split(url, "/")
@@ -31,13 +31,26 @@ func getHttp(url string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp.Body.Close()
+
 	out, err := os.Create(outputFile)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer out.Close()
-	io.Copy(out, resp.Body)
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = out.Close()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func getGit(url string, outputDir string) {

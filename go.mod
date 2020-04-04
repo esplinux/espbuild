@@ -2,4 +2,6 @@ module espbuild
 
 go 1.14
 
-require gopkg.in/src-d/go-git.v4 v4.12.0
+require (
+	github.com/go-git/go-git/v5 v5.0.0
+)
