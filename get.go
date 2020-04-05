@@ -63,6 +63,8 @@ func getHttpSource(url string, outputDir string) {
 		reader = resp.Body
 	}
 
+	// Derived from example by Steve Domino
+	// gist.githubusercontent.com/sdomino/635a5ed4f32c93aad131/raw/1f1a2609f9bf04f3a681a96c26350b0d694549bf/untargz.go
 	tr := tar.NewReader(reader)
 	for {
 		header, err := tr.Next()
@@ -127,8 +129,6 @@ func getGit(url string, outputDir string) {
 }
 
 func main() {
-	//getHttp(os.Args[1], os.Args[2])
-
 	if len(os.Args) < 2 {
 		fmt.Println("Usage:")
 		fmt.Println("\tget https://example.com/filename.tar.gz")
