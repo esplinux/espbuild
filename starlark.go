@@ -8,10 +8,6 @@ import (
 	"unsafe"
 )
 
-func getString() string {
-	return "World"
-}
-
 // cache is a concurrency-safe, duplicate-suppressing,
 // non-blocking cache of the doLoad function.
 // See Section 9.7 of gopl.io for an explanation of this structure.
