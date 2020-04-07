@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go.starlark.net/starlark"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -72,6 +73,23 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 }
 
 func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, error) {
+	// repeat(str, n=1) is a Go function called from Starlark.
+	// It behaves like the 'string * int' operation.
+	repeat := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		var s string
+		var n int = 1
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "s", &s, "n?", &n); err != nil {
+			return nil, err
+		}
+		return starlark.String(strings.Repeat(s, n)), nil
+	}
+
+	// This dictionary defines the pre-declared environment.
+	predeclared := starlark.StringDict{
+		"greeting": starlark.String("hello"),
+		"repeat":   starlark.NewBuiltin("repeat", repeat),
+	}
+
 	thread := &starlark.Thread{
 		Name:  "exec " + module,
 		Print: func(_ *starlark.Thread, msg string) { fmt.Println(msg) },
@@ -81,7 +99,7 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 		},
 	}
 	data := c.fakeFilesystem[module]
-	return starlark.ExecFile(thread, module, data, nil)
+	return starlark.ExecFile(thread, module, data, predeclared)
 }
 
 // -- concurrent cycle checking --

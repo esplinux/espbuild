@@ -16,7 +16,7 @@ func ExampleThread_Load_parallel() {
 		fakeFilesystem: map[string]string{
 			"c.star": `load("a.star", "a"); c = a * 2`,
 			"b.star": `load("a.star", "a"); b = a * 3`,
-			"a.star": `a = 1; print("loaded a")`,
+			"a.star": `a = 1; print("loaded a"); print(repeat("mur", 2))`,
 		},
 	}
 
