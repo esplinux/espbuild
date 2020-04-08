@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	"go.starlark.net/starlark"
-	"strings"
+	"log"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -16,8 +16,6 @@ import (
 type cache struct {
 	cacheMu sync.Mutex
 	cache   map[string]*entry
-
-	fakeFilesystem map[string]string
 }
 
 type entry struct {
@@ -75,31 +73,48 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, error) {
 	// repeat(str, n=1) is a Go function called from Starlark.
 	// It behaves like the 'string * int' operation.
-	repeat := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		var s string
-		var n int = 1
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "s", &s, "n?", &n); err != nil {
+	shell := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		var command string
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command); err != nil {
 			return nil, err
 		}
-		return starlark.String(strings.Repeat(s, n)), nil
+		shell(command)
+		return starlark.None, nil
+	}
+
+	source := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		var http string = ""
+		var git string = ""
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "git?", &git); err != nil {
+			return nil, err
+		}
+
+		if http != "" {
+			getHttpSource(http, ".")
+		} else if git != "" {
+			getGit(git, ".")
+		} else {
+			log.Fatal("Error: Source only supports git and http")
+		}
+
+		return starlark.None, nil
 	}
 
 	// This dictionary defines the pre-declared environment.
 	predeclared := starlark.StringDict{
-		"greeting": starlark.String("hello"),
-		"repeat":   starlark.NewBuiltin("repeat", repeat),
+		"ESP_BUILD_VERSION": starlark.String(ESP_BUILD_VERSION),
+		"shell":             starlark.NewBuiltin("shell", shell),
+		"source":            starlark.NewBuiltin("source", source),
 	}
 
 	thread := &starlark.Thread{
-		Name:  "exec " + module,
-		Print: func(_ *starlark.Thread, msg string) { fmt.Println(msg) },
+		Name: "exec " + module,
 		Load: func(_ *starlark.Thread, module string) (starlark.StringDict, error) {
 			// Tunnel the cycle-checker state for this "thread of loading".
 			return c.get(cc, module)
 		},
 	}
-	data := c.fakeFilesystem[module]
-	return starlark.ExecFile(thread, module, data, predeclared)
+	return starlark.ExecFile(thread, module, nil, predeclared)
 }
 
 // -- concurrent cycle checking --
