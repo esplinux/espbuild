@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"go.starlark.net/starlark"
 	"log"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"sync"
@@ -73,13 +74,25 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 }
 
 func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, error) {
-	// repeat(str, n=1) is a Go function called from Starlark.
-	// It behaves like the 'string * int' operation.
+	BUILDFILE, err := filepath.Abs(module)
+	fatal(err)
+	CURDIR := filepath.Dir(BUILDFILE)
+
+	path := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		var path string
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "path", &path); err != nil {
+			return nil, err
+		}
+
+		return starlark.String(CURDIR + "/" + path), nil
+	}
+
 	shell := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		var command string
 		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command); err != nil {
 			return nil, err
 		}
+		println(command)
 		shell(command)
 		return starlark.None, nil
 	}
@@ -92,9 +105,9 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 		}
 
 		if http != "" {
-			getHttpSource(http, ".")
+			getHttpSource(http, CURDIR)
 		} else if git != "" {
-			getGit(git, ".")
+			getGit(git, CURDIR)
 		} else {
 			log.Fatal("Error: Source only supports git and http")
 		}
@@ -106,6 +119,7 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 	predeclared := starlark.StringDict{
 		"ESP_BUILD_VERSION": starlark.String(ESP_BUILD_VERSION),
 		"NPROC":             starlark.String(strconv.Itoa(runtime.NumCPU())),
+		"path":              starlark.NewBuiltin("path", path),
 		"shell":             starlark.NewBuiltin("shell", shell),
 		"source":            starlark.NewBuiltin("source", source),
 	}
