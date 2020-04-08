@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"go.starlark.net/starlark"
 	"log"
+	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -103,6 +105,7 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 	// This dictionary defines the pre-declared environment.
 	predeclared := starlark.StringDict{
 		"ESP_BUILD_VERSION": starlark.String(ESP_BUILD_VERSION),
+		"NPROC":             starlark.String(strconv.Itoa(runtime.NumCPU())),
 		"shell":             starlark.NewBuiltin("shell", shell),
 		"source":            starlark.NewBuiltin("source", source),
 	}
