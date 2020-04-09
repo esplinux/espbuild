@@ -15,7 +15,9 @@ import (
 	"time"
 )
 
-func getHttpSource(url string, outputDir string) {
+func getHttpSource(url string, outputDir string) string {
+	source := ""
+
 	urlSplit := strings.Split(url, "/")
 	outputFile := urlSplit[len(urlSplit)-1]
 
@@ -60,7 +62,7 @@ func getHttpSource(url string, outputDir string) {
 
 		// if no more files are found return
 		case err == io.EOF:
-			return
+			return source
 
 		// return any other error
 		case err != nil:
@@ -83,6 +85,9 @@ func getHttpSource(url string, outputDir string) {
 
 		// if its a dir and it doesn't exist create it
 		case tar.TypeDir:
+			if source == "" {
+				source = target
+			}
 			if _, err := os.Stat(target); err != nil {
 				err = os.MkdirAll(target, 0755)
 				fatal(err)
@@ -105,7 +110,7 @@ func getHttpSource(url string, outputDir string) {
 	}
 }
 
-func getGit(url string, outputDir string) {
+func getGit(url string, outputDir string) string {
 	urlSplit := strings.Split(url, "/")
 	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1]
 
@@ -113,4 +118,6 @@ func getGit(url string, outputDir string) {
 		URL: url,
 	})
 	fatal(err)
+
+	return outputDir
 }

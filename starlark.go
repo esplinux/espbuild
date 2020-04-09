@@ -92,27 +92,33 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command); err != nil {
 			return nil, err
 		}
-		println(command)
+		println(module + ": " + command)
 		shell(command)
 		return starlark.None, nil
 	}
 
 	source := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		var http string = ""
-		var git string = ""
+		http := ""
+		git := ""
+		source := ""
+
 		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "git?", &git); err != nil {
 			return nil, err
 		}
 
 		if http != "" {
-			getHttpSource(http, CURDIR)
+			source = getHttpSource(http, CURDIR)
 		} else if git != "" {
-			getGit(git, CURDIR)
+			source = getGit(git, CURDIR)
 		} else {
 			log.Fatal("Error: Source only supports git and http")
 		}
 
-		return starlark.None, nil
+		if source == "" {
+			log.Fatal("Error: Source directory has not been set, aborting")
+		}
+
+		return starlark.String(source), nil
 	}
 
 	// This dictionary defines the pre-declared environment.
