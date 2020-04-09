@@ -31,7 +31,9 @@ jobs:
         fi
 
     - name: Build
-      run: env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -v .
+      run: |
+        env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -v .
+        tar -czf espbuild.tar.gz espbuild
 
     - name: Create Release
       id: create_release
@@ -51,6 +53,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.ESPBuildToken }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
-        asset_path: espbuild
-        asset_name: espbuild
-        asset_content_type: application/octet-stream
+        asset_path: espbuild.tar.gz
+        asset_name: espbuild.tar.gz
+        asset_content_type: application/x-gzip
