@@ -85,6 +85,9 @@ func getHttpSource(url string, outputDir string) string {
 
 		// if its a dir and it doesn't exist create it
 		case tar.TypeDir:
+			// todo: eric@ this is evil and likely to eventually break
+			// Assumption: The first directory present in the tarball is the source directory
+			// this is an imperfect assumption but should almost always be correct.
 			if source == "" {
 				source = target
 			}
