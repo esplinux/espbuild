@@ -86,20 +86,6 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "name", &name, "version", &version, "rev", &rev); err != nil {
 			return nil, err
 		}
-		/**
-		dict := starlark.NewDict(3)
-
-		err = dict.SetKey( starlark.String("name"),  starlark.String(name))
-		fatal(err)
-
-		err = dict.SetKey( starlark.String("version"),  starlark.String(version))
-		fatal(err)
-
-		err = dict.SetKey( starlark.String("rev"),  starlark.String(rev))
-		fatal(err)
-
-		return dict, nil
-		*/
 
 		stringDictionary := starlark.StringDict{
 			"name":    starlark.String(name),
@@ -132,16 +118,17 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 	sourceBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		http := ""
 		git := ""
+		branch := ""
 		source := ""
 
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "git?", &git); err != nil {
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "git?", &git, "branch?", &branch); err != nil {
 			return nil, err
 		}
 
 		if http != "" {
 			source = getHttpSource(http, CURDIR)
 		} else if git != "" {
-			source = getGit(git, CURDIR)
+			source = getGit(git, branch, CURDIR)
 		} else {
 			log.Fatal("Error: Source only supports git and http")
 		}

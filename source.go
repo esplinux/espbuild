@@ -5,6 +5,7 @@ import (
 	"compress/bzip2"
 	"compress/gzip"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/ulikunitz/xz"
 	"io"
 	"net"
@@ -113,14 +114,25 @@ func getHttpSource(url string, outputDir string) string {
 	}
 }
 
-func getGit(url string, outputDir string) string {
+func getGit(url string, branch string, outputDir string) string {
 	urlSplit := strings.Split(url, "/")
-	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1] + "-src"
+	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1]
+	if branch == "" {
+		outputDir = outputDir + "-HEAD"
+	} else {
+		outputDir = outputDir + "-" + branch
+	}
 
-	if _, err := os.Stat(outputDir); err != nil {
-		_, err := git.PlainClone(outputDir, false, &git.CloneOptions{
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		cloneOptions := &git.CloneOptions{
 			URL: url,
-		})
+		}
+
+		if branch != "" {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
+		}
+
+		_, err := git.PlainClone(outputDir, false, cloneOptions)
 		fatal(err)
 	} else {
 		repo, err := git.PlainOpen(outputDir)
@@ -129,7 +141,13 @@ func getGit(url string, outputDir string) string {
 		workTree, err := repo.Worktree()
 		fatal(err)
 
-		err = workTree.Pull(&git.PullOptions{RemoteName: "origin"})
+		pullOptions := &git.PullOptions{RemoteName: "origin"}
+
+		if branch != "" {
+			pullOptions.ReferenceName = plumbing.ReferenceName(branch)
+		}
+
+		err = workTree.Pull(pullOptions)
 		if err != git.NoErrAlreadyUpToDate {
 			fatal(err)
 		}
