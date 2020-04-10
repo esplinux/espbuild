@@ -24,7 +24,7 @@ func getHttpSource(url string, outputDir string) string {
 
 	var netTransport = &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout: 5 * time.Second,
+			Timeout: 30 * time.Second,
 		}).DialContext,
 		TLSHandshakeTimeout: 5 * time.Second,
 	}
