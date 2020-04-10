@@ -106,12 +106,13 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 	}
 
 	shellBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		env := starlark.NewDict(3)
 		var command string
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command); err != nil {
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command, "env?", &env); err != nil {
 			return nil, err
 		}
 		println(module + ": " + command)
-		shell(command)
+		shell(command, env)
 		return starlark.None, nil
 	}
 
