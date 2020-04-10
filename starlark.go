@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go.starlark.net/starlark"
+	"go.starlark.net/starlarkstruct"
 	"log"
 	"path/filepath"
 	"runtime"
@@ -78,7 +79,38 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 	fatal(err)
 	CURDIR := filepath.Dir(BUILDFILE)
 
-	path := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	packageBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		var name string
+		var version string
+		var rev string
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "name", &name, "version", &version, "rev", &rev); err != nil {
+			return nil, err
+		}
+		/**
+		dict := starlark.NewDict(3)
+
+		err = dict.SetKey( starlark.String("name"),  starlark.String(name))
+		fatal(err)
+
+		err = dict.SetKey( starlark.String("version"),  starlark.String(version))
+		fatal(err)
+
+		err = dict.SetKey( starlark.String("rev"),  starlark.String(rev))
+		fatal(err)
+
+		return dict, nil
+		*/
+
+		stringDictionary := starlark.StringDict{
+			"name":    starlark.String(name),
+			"version": starlark.String(version),
+			"rev":     starlark.String(rev),
+		}
+
+		return starlarkstruct.FromStringDict(starlark.String("struct"), stringDictionary), nil
+	}
+
+	pathBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		var path string
 		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "path", &path); err != nil {
 			return nil, err
@@ -87,7 +119,7 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 		return starlark.String(CURDIR + "/" + path), nil
 	}
 
-	shell := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	shellBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		var command string
 		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command); err != nil {
 			return nil, err
@@ -97,7 +129,7 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 		return starlark.None, nil
 	}
 
-	source := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	sourceBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		http := ""
 		git := ""
 		source := ""
@@ -125,9 +157,10 @@ func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, er
 	predeclared := starlark.StringDict{
 		"ESP_BUILD_VERSION": starlark.String(ESP_BUILD_VERSION),
 		"NPROC":             starlark.String(strconv.Itoa(runtime.NumCPU())),
-		"path":              starlark.NewBuiltin("path", path),
-		"shell":             starlark.NewBuiltin("shell", shell),
-		"source":            starlark.NewBuiltin("source", source),
+		"package":           starlark.NewBuiltin("package", packageBuiltIn),
+		"path":              starlark.NewBuiltin("path", pathBuiltIn),
+		"shell":             starlark.NewBuiltin("shell", shellBuiltIn),
+		"source":            starlark.NewBuiltin("source", sourceBuiltIn),
 	}
 
 	thread := &starlark.Thread{

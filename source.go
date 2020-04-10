@@ -115,12 +115,25 @@ func getHttpSource(url string, outputDir string) string {
 
 func getGit(url string, outputDir string) string {
 	urlSplit := strings.Split(url, "/")
-	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1]
+	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1] + "-src"
 
-	_, err := git.PlainClone(outputDir, false, &git.CloneOptions{
-		URL: url,
-	})
-	fatal(err)
+	if _, err := os.Stat(outputDir); err != nil {
+		_, err := git.PlainClone(outputDir, false, &git.CloneOptions{
+			URL: url,
+		})
+		fatal(err)
+	} else {
+		repo, err := git.PlainOpen(outputDir)
+		fatal(err)
+
+		workTree, err := repo.Worktree()
+		fatal(err)
+
+		err = workTree.Pull(&git.PullOptions{RemoteName: "origin"})
+		if err != git.NoErrAlreadyUpToDate {
+			fatal(err)
+		}
+	}
 
 	return outputDir
 }
