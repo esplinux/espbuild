@@ -1,4 +1,4 @@
-module espbuild
+module github.com/esplinux/espbuild
 
 go 1.13
 
