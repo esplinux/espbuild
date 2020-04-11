@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"go/build"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
 	"log"
@@ -82,6 +83,9 @@ func fileExists(filename string) bool {
 
 func main() {
 	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = build.Default.GOPATH
+	}
 
 	if len(os.Args) < 2 {
 		fmt.Println("Usage:")
@@ -95,7 +99,7 @@ func main() {
 		} else if fileExists("/usr/share/esp/builtins.esp") {
 			builtins = "/usr/share/esp/builtins.esp"
 		} else if fileExists(gopath + "/src/github.com/esplinux/espbuild/builtins.esp") {
-			builtins = "/src/github.com/esplinux/espbuild/builtins.esp"
+			builtins = gotpath + "/src/github.com/esplinux/espbuild/builtins.esp"
 		}
 
 		if builtins == "" {
