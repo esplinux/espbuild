@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go.starlark.net/starlark"
 	"os"
@@ -16,7 +17,9 @@ func shell(command string, env *starlark.Dict) error {
 	var k starlark.Value
 	for iter.Next(&k) {
 		v, _, err := env.Get(k)
-		fatal(err)
+		if err != nil {
+			return err
+		}
 
 		key, _ := starlark.AsString(k)
 		value, _ := starlark.AsString(v)
@@ -24,11 +27,43 @@ func shell(command string, env *starlark.Dict) error {
 		envList = append(envList, key+"="+value)
 	}
 	cmd.Env = envList
-	stdoutStderr, err := cmd.CombinedOutput()
-	fmt.Printf("%s", stdoutStderr)
+
+	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("shell %s: %w", stdoutStderr, err)
-	} else {
-		return nil
+		return err
 	}
+
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	stdoutBuf := new(bytes.Buffer)
+	if _, err :=  stdoutBuf.ReadFrom(stdout); err != nil {
+		return err
+	}
+
+	stderrBuf := new(bytes.Buffer)
+	if _, err = stderrBuf.ReadFrom(stderr); err != nil {
+		return err
+	}
+
+	if err := stdout.Close(); err != nil {
+		return err
+	}
+
+	if err := stderr.Close(); err != nil {
+		return err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return fmt.Errorf("shell(%v): %s", err, stderrBuf.String())
+	}
+	
+	print(stdoutBuf.String())
+	return nil
 }

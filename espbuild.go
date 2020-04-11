@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 	"fmt"
-	"go/build"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
+	"go/build"
 	"log"
 	"os"
 	"path/filepath"
@@ -115,7 +115,7 @@ func main() {
 		}
 
 		args := os.Args[1:]
-		if os.Args[1] == "-D"  {
+		if os.Args[1] == "-D" {
 			if len(os.Args) < 3 {
 				log.Fatal("You must specify a parameter with -D")
 			} else {
@@ -128,7 +128,7 @@ func main() {
 			cache:       make(map[string]*entry),
 			predeclared: predeclared,
 		}
-		
+
 		ch := make(chan string)
 		for _, arg := range args {
 			go func(buildfile string) {
