@@ -107,13 +107,6 @@ func main() {
 		}
 
 		predeclared := getPredeclared()
-
-		args := os.Args
-		if os.Args[1] == "-M"  {
-			predeclared["MODE"] = starlark.String(os.Args[2])
-			args = os.Args[3:]
-		}
-
 		globals, err := starlark.ExecFile(&starlark.Thread{Name: builtins}, builtins, nil, predeclared)
 		fatal(err)
 
@@ -121,11 +114,21 @@ func main() {
 			predeclared[k] = v
 		}
 
+		args := os.Args[1:]
+		if os.Args[1] == "-D"  {
+			if len(os.Args) < 3 {
+				log.Fatal("You must specify a parameter with -D")
+			} else {
+				predeclared[os.Args[2]] = starlark.Bool(true)
+				args = os.Args[3:]
+			}
+		}
+
 		cache := &cache{
 			cache:       make(map[string]*entry),
 			predeclared: predeclared,
 		}
-
+		
 		ch := make(chan string)
 		for _, arg := range args {
 			go func(buildfile string) {
