@@ -33,7 +33,7 @@ jobs:
     - name: Build
       run: |
         env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -v .
-        tar -czf espbuild.tar.gz espbuild
+        tar -czf espbuild.tar.gz espbuild builtins.esp
 
     - name: Create Release
       id: create_release
