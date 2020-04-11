@@ -99,7 +99,7 @@ func main() {
 		} else if fileExists("/usr/share/esp/builtins.esp") {
 			builtins = "/usr/share/esp/builtins.esp"
 		} else if fileExists(gopath + "/src/github.com/esplinux/espbuild/builtins.esp") {
-			builtins = gotpath + "/src/github.com/esplinux/espbuild/builtins.esp"
+			builtins = gopath + "/src/github.com/esplinux/espbuild/builtins.esp"
 		}
 
 		if builtins == "" {
