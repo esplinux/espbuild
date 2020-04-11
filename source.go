@@ -44,7 +44,7 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 	defer closer(resp.Body)
 
 	var reader io.Reader
-	if strings.HasSuffix(outputFile, ".gz") {
+	if strings.HasSuffix(outputFile, "gz") {
 		gzipStream, err := gzip.NewReader(resp.Body)
 		if err != nil {
 			return starlark.None, err
