@@ -108,6 +108,12 @@ func main() {
 
 		predeclared := getPredeclared()
 
+		args := os.Args
+		if os.Args[1] == "-M"  {
+			predeclared["MODE"] = starlark.String(os.Args[2])
+			args = os.Args[3:]
+		}
+
 		globals, err := starlark.ExecFile(&starlark.Thread{Name: builtins}, builtins, nil, predeclared)
 		fatal(err)
 
@@ -121,7 +127,7 @@ func main() {
 		}
 
 		ch := make(chan string)
-		for _, arg := range os.Args[1:] {
+		for _, arg := range args {
 			go func(buildfile string) {
 				globals, err := cache.Load(buildfile)
 				if err != nil {
@@ -131,7 +137,7 @@ func main() {
 			}(arg)
 		}
 
-		for _, arg := range os.Args[1:] {
+		for _, arg := range args {
 			println("Globals[" + arg + "]: " + <-ch)
 		}
 	}
