@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func shell(command string, env *starlark.Dict) {
+func shell(command string, env *starlark.Dict) error {
 	cmd := exec.Command("sh", "-c", command)
 	envList := os.Environ()
 
@@ -25,6 +25,10 @@ func shell(command string, env *starlark.Dict) {
 	}
 	cmd.Env = envList
 	stdoutStderr, err := cmd.CombinedOutput()
-	fatal(err)
-	fmt.Printf("%s\n", stdoutStderr)
+	fmt.Printf("%s", stdoutStderr)
+	if err != nil {
+		return fmt.Errorf("shell %s: %w", stdoutStderr, err)
+	} else {
+		return nil
+	}
 }
