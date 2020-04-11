@@ -23,6 +23,8 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 	urlSplit := strings.Split(url, "/")
 	outputFile := urlSplit[len(urlSplit)-1]
 
+	println("Downloading: " + url)
+
 	var netTransport = &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout: 10 * time.Second,
@@ -134,8 +136,10 @@ func getGit(url string, branch string, outputDir string) (starlark.Value, error)
 	urlSplit := strings.Split(url, "/")
 	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1]
 	if branch == "" {
+		println("Cloning: " + url)
 		outputDir = outputDir + "-HEAD"
 	} else {
+		println("Cloning[" + branch + "]: " + url)
 		outputDir = outputDir + "-" + branch
 	}
 
