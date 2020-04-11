@@ -25,13 +25,13 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 
 	var netTransport = &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout: 30 * time.Second,
+			Timeout: 10 * time.Second,
 		}).DialContext,
 		TLSHandshakeTimeout: 5 * time.Second,
 	}
 
 	var netClient = &http.Client{
-		Timeout:   time.Second * 10,
+		Timeout:   time.Second * 60,
 		Transport: netTransport,
 	}
 
