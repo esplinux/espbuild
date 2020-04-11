@@ -3,11 +3,6 @@ package main
 import (
 	"fmt"
 	"go.starlark.net/starlark"
-	"go.starlark.net/starlarkstruct"
-	"log"
-	"path/filepath"
-	"runtime"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -20,6 +15,8 @@ import (
 type cache struct {
 	cacheMu sync.Mutex
 	cache   map[string]*entry
+
+	predeclared starlark.StringDict
 }
 
 type entry struct {
@@ -75,90 +72,15 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 }
 
 func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, error) {
-	BUILDFILE, err := filepath.Abs(module)
-	fatal(err)
-	CURDIR := filepath.Dir(BUILDFILE)
-
-	packageBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		var name string
-		var version string
-		var rev string
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "name", &name, "version", &version, "rev", &rev); err != nil {
-			return nil, err
-		}
-
-		stringDictionary := starlark.StringDict{
-			"name":    starlark.String(name),
-			"version": starlark.String(version),
-			"rev":     starlark.String(rev),
-		}
-
-		return starlarkstruct.FromStringDict(starlark.String("struct"), stringDictionary), nil
-	}
-
-	pathBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		var path string
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "path", &path); err != nil {
-			return nil, err
-		}
-
-		return starlark.String(CURDIR + "/" + path), nil
-	}
-
-	shellBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		env := starlark.NewDict(3)
-		var command string
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command, "env?", &env); err != nil {
-			return nil, err
-		}
-		println(module + ": " + command)
-		shell(command, env)
-		return starlark.None, nil
-	}
-
-	sourceBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		http := ""
-		git := ""
-		branch := ""
-		source := ""
-
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "git?", &git, "branch?", &branch); err != nil {
-			return nil, err
-		}
-
-		if http != "" {
-			source = getHttpSource(http, CURDIR)
-		} else if git != "" {
-			source = getGit(git, branch, CURDIR)
-		} else {
-			log.Fatal("Error: Source only supports git and http")
-		}
-
-		if source == "" {
-			log.Fatal("Error: Source directory has not been set, aborting")
-		}
-
-		return starlark.String(source), nil
-	}
-
-	// This dictionary defines the pre-declared environment.
-	predeclared := starlark.StringDict{
-		"ESP_BUILD_VERSION": starlark.String(ESP_BUILD_VERSION),
-		"NPROC":             starlark.String(strconv.Itoa(runtime.NumCPU())),
-		"package":           starlark.NewBuiltin("package", packageBuiltIn),
-		"path":              starlark.NewBuiltin("path", pathBuiltIn),
-		"shell":             starlark.NewBuiltin("shell", shellBuiltIn),
-		"source":            starlark.NewBuiltin("source", sourceBuiltIn),
-	}
-
 	thread := &starlark.Thread{
-		Name: "exec " + module,
+		Name: module,
 		Load: func(_ *starlark.Thread, module string) (starlark.StringDict, error) {
 			// Tunnel the cycle-checker state for this "thread of loading".
 			return c.get(cc, module)
 		},
 	}
-	return starlark.ExecFile(thread, module, nil, predeclared)
+
+	return starlark.ExecFile(thread, module, nil, c.predeclared)
 }
 
 // -- concurrent cycle checking --

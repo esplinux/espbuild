@@ -7,6 +7,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/ulikunitz/xz"
+	"go.starlark.net/starlark"
 	"io"
 	"net"
 	"net/http"
@@ -16,7 +17,7 @@ import (
 	"time"
 )
 
-func getHttpSource(url string, outputDir string) string {
+func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 	source := ""
 
 	urlSplit := strings.Split(url, "/")
@@ -35,20 +36,26 @@ func getHttpSource(url string, outputDir string) string {
 	}
 
 	resp, err := netClient.Get(url)
-	fatal(err)
+	if err != nil {
+		return starlark.None, err
+	}
 	defer closer(resp.Body)
 
 	var reader io.Reader
 	if strings.HasSuffix(outputFile, ".gz") {
 		gzipStream, err := gzip.NewReader(resp.Body)
-		fatal(err)
+		if err != nil {
+			return starlark.None, err
+		}
 		defer closer(gzipStream)
 		reader = gzipStream
 	} else if strings.HasSuffix(outputFile, "bz") {
 		reader = bzip2.NewReader(resp.Body)
 	} else if strings.HasSuffix(outputFile, "xz") {
 		reader, err = xz.NewReader(resp.Body)
-		fatal(err)
+		if err != nil {
+			return starlark.None, err
+		}
 	} else {
 		reader = resp.Body
 	}
@@ -63,11 +70,11 @@ func getHttpSource(url string, outputDir string) string {
 
 		// if no more files are found return
 		case err == io.EOF:
-			return source
+			return starlark.String(source), nil
 
 		// return any other error
 		case err != nil:
-			fatal(err)
+			return starlark.None, err
 
 		// if the header is nil, just skip it (not sure how this happens)
 		case header == nil:
@@ -92,29 +99,38 @@ func getHttpSource(url string, outputDir string) string {
 			if source == "" {
 				source = target
 			}
+
 			if _, err := os.Stat(target); err != nil {
 				err = os.MkdirAll(target, 0755)
-				fatal(err)
+				if err != nil {
+					return starlark.None, err
+				}
 			}
 
 		// if it's a file create it
 		case tar.TypeReg:
 			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-			fatal(err)
+			if err != nil {
+				return starlark.None, err
+			}
 
 			// copy over contents
 			_, err = io.Copy(f, tr)
-			fatal(err)
+			if err != nil {
+				return starlark.None, err
+			}
 
 			// manually close here after each file operation; deferring would cause each file close
 			// to wait until all operations have completed.
 			err = f.Close()
-			fatal(err)
+			if err != nil {
+				return starlark.None, err
+			}
 		}
 	}
 }
 
-func getGit(url string, branch string, outputDir string) string {
+func getGit(url string, branch string, outputDir string) (starlark.Value, error) {
 	urlSplit := strings.Split(url, "/")
 	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1]
 	if branch == "" {
@@ -133,13 +149,19 @@ func getGit(url string, branch string, outputDir string) string {
 		}
 
 		_, err := git.PlainClone(outputDir, false, cloneOptions)
-		fatal(err)
+		if err != nil {
+			return starlark.None, err
+		}
 	} else {
 		repo, err := git.PlainOpen(outputDir)
-		fatal(err)
+		if err != nil {
+			return starlark.None, err
+		}
 
 		workTree, err := repo.Worktree()
-		fatal(err)
+		if err != nil {
+			return starlark.None, err
+		}
 
 		pullOptions := &git.PullOptions{RemoteName: "origin"}
 
@@ -149,9 +171,9 @@ func getGit(url string, branch string, outputDir string) string {
 
 		err = workTree.Pull(pullOptions)
 		if err != git.NoErrAlreadyUpToDate {
-			fatal(err)
+			return starlark.None, err
 		}
 	}
 
-	return outputDir
+	return starlark.String(outputDir), nil
 }
