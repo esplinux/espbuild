@@ -34,14 +34,14 @@ type cycleChecker struct {
 	waitsFor unsafe.Pointer // an *entry; see cycleCheck
 }
 
-func (c *cache) Load(module string) (starlark.StringDict, error) {
-	return c.get(new(cycleChecker), module)
+func (c *cache) Load(buildfile string) (starlark.StringDict, error) {
+	return c.get(new(cycleChecker), buildfile)
 }
 
 // get loads and returns an entry (if not already loaded).
-func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error) {
+func (c *cache) get(cc *cycleChecker, buildfile string) (starlark.StringDict, error) {
 	c.cacheMu.Lock()
-	e := c.cache[module]
+	e := c.cache[buildfile]
 	if e != nil {
 		c.cacheMu.Unlock()
 		// Some other goroutine is getting this module.
@@ -58,11 +58,11 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 	} else {
 		// First request for this module.
 		e = &entry{ready: make(chan struct{})}
-		c.cache[module] = e
+		c.cache[buildfile] = e
 		c.cacheMu.Unlock()
 
 		e.setOwner(cc)
-		e.globals, e.err = c.doLoad(cc, module)
+		e.globals, e.err = c.doLoad(cc, buildfile)
 		e.setOwner(nil)
 
 		// Broadcast that the entry is now ready.
@@ -71,16 +71,16 @@ func (c *cache) get(cc *cycleChecker, module string) (starlark.StringDict, error
 	return e.globals, e.err
 }
 
-func (c *cache) doLoad(cc *cycleChecker, module string) (starlark.StringDict, error) {
+func (c *cache) doLoad(cc *cycleChecker, buildfile string) (starlark.StringDict, error) {
 	thread := &starlark.Thread{
-		Name: module,
-		Load: func(_ *starlark.Thread, module string) (starlark.StringDict, error) {
+		Name: buildfile,
+		Load: func(_ *starlark.Thread, buildfile string) (starlark.StringDict, error) {
 			// Tunnel the cycle-checker state for this "thread of loading".
-			return c.get(cc, module)
+			return c.get(cc, buildfile)
 		},
 	}
 
-	return starlark.ExecFile(thread, module, nil, c.predeclared)
+	return starlark.ExecFile(thread, buildfile, nil, c.predeclared)
 }
 
 // -- concurrent cycle checking --

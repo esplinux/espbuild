@@ -62,25 +62,49 @@ func getPredeclared() starlark.StringDict {
 	}
 
 	predeclared := starlark.StringDict{
-		"NPROC":   starlark.String(strconv.Itoa(runtime.NumCPU())),
-		"path":    starlark.NewBuiltin("path", pathBuiltIn),
-		"shell":   starlark.NewBuiltin("shell", shellBuiltIn),
-		"source":  starlark.NewBuiltin("source", sourceBuiltIn),
-		"struct":  starlark.NewBuiltin("struct", starlarkstruct.Make),
-		"package": starlark.NewBuiltin("package", starlarkstruct.Make),
+		"NPROC":  starlark.String(strconv.Itoa(runtime.NumCPU())),
+		"path":   starlark.NewBuiltin("path", pathBuiltIn),
+		"shell":  starlark.NewBuiltin("shell", shellBuiltIn),
+		"source": starlark.NewBuiltin("source", sourceBuiltIn),
+		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
 	}
 
 	return predeclared
 }
 
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
 func main() {
+	gopath := os.Getenv("GOPATH")
+
 	if len(os.Args) < 2 {
 		fmt.Println("Usage:")
 		fmt.Println("\tespbuild package.esp")
 	} else {
+		var builtins string
+		if fileExists("builtins.esp") {
+			builtins = "builtins.esp"
+		} else if fileExists("/share/esp/builtins.esp") {
+			builtins = "/share/esp/builtins.esp"
+		} else if fileExists("/usr/share/esp/builtins.esp") {
+			builtins = "/usr/share/esp/builtins.esp"
+		} else if fileExists(gopath + "/src/github.com/esplinux/espbuild/builtins.esp") {
+			builtins = "/src/github.com/esplinux/espbuild/builtins.esp"
+		}
+
+		if builtins == "" {
+			log.Fatal("Could not find builtins.esp")
+		}
+
 		predeclared := getPredeclared()
 
-		globals, err := starlark.ExecFile(&starlark.Thread{Name: "common"}, "common.esp", nil, predeclared)
+		globals, err := starlark.ExecFile(&starlark.Thread{Name: builtins}, builtins, nil, predeclared)
 		fatal(err)
 
 		for k, v := range globals {

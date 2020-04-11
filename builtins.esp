@@ -1,0 +1,19 @@
+ESP_BUILD_VERSION = "0.0.1"
+
+def configure(source, options="", env={}):
+  shell("cd " + source + "; ./configure " + options, env)
+
+def make(source, target="", env={}):
+  shell("cd " + source + "; make " + target, env)
+
+def automake(source, options="--prefix=''", target="install", env={}):
+  out = source + "-out"
+  configure(source, options, env)
+  make(source, "-j " + NPROC, env)
+  make(source, "DESTDIR=" + out + " " + target, env)
+  return out
+
+def tarball(out, package):
+  tarfile = path("-".join([package.name, package.version, package.rev]) + ".tgz")
+  shell ( "cd " + out + " ; tar -czf " + tarfile + " .")
+  return tarfile
