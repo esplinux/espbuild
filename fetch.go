@@ -19,6 +19,49 @@ import (
 	"time"
 )
 
+// Files have a timeout of 30 seconds
+func getHttpFile(url string, outputDir string, file string) (starlark.Value, error) {
+	target := filepath.Join(outputDir, file)
+
+	println("Downloading: " + url + " to " + target)
+
+	var netTransport = &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout: 10 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout: 5 * time.Second,
+	}
+
+	var netClient = &http.Client{
+		Timeout:   time.Second * 30,
+		Transport: netTransport,
+	}
+
+	resp, err := netClient.Get(url)
+	if err != nil {
+		return starlark.None, err
+	}
+	defer closer(resp.Body)
+
+	outputDir = filepath.Dir(target)
+	if err = os.MkdirAll(outputDir, 0755); err != nil {
+		return starlark.None, err
+	}
+
+	out, err := os.Create(target)
+	if err != nil {
+		return starlark.None, err
+	}
+	defer closer(out)
+
+	if _, err := io.Copy(out, resp.Body); err != nil {
+		return starlark.None, err
+	}
+
+	return starlark.String(target), nil
+}
+
+// Sources have a timeout of 300 seconds aka 5 minutes
 func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 	source := ""
 
@@ -34,8 +77,11 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 		TLSHandshakeTimeout: 5 * time.Second,
 	}
 
+	// Disable automagic decompression for sources
+	netTransport.DisableCompression = true
+
 	var netClient = &http.Client{
-		Timeout:   time.Second * 60,
+		Timeout:   time.Second * 300,
 		Transport: netTransport,
 	}
 
@@ -65,7 +111,6 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 	}
 
 	// Derived from example by Steve Domino and extended by reading golang std library source
-	// gist.githubusercontent.com/sdomino/635a5ed4f32c93aad131/raw/1f1a2609f9bf04f3a681a96c26350b0d694549bf/untargz.go
 	tr := tar.NewReader(reader)
 	for {
 		header, err := tr.Next()
@@ -127,7 +172,7 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 			if err = f.Close(); err != nil {
 				return starlark.None, err
 			}
-			
+
 		case tar.TypeLink:
 			if err := os.Link(header.Linkname, target); err != nil {
 				return starlark.None, err
@@ -137,7 +182,7 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 			if err := os.Symlink(header.Linkname, target); err != nil {
 				return starlark.None, err
 			}
-			
+
 		case tar.TypeChar:
 			mode := uint32(header.Mode & 07777)
 			mode |= unix.S_IFCHR

@@ -49,12 +49,17 @@ func getPredeclared() starlark.StringDict {
 		http := ""
 		git := ""
 		branch := ""
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "git?", &git, "branch?", &branch); err != nil {
+		file := ""
+		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "file?", &file, "git?", &git, "branch?", &branch); err != nil {
 			return nil, err
 		}
 
 		if http != "" {
-			return getHttpSource(http, curdir)
+			if (file != "") {
+				return getHttpFile(http, curdir, file)
+			} else {
+				return getHttpSource(http, curdir)
+			}
 		} else if git != "" {
 			return getGit(git, branch, curdir)
 		} else {
@@ -66,7 +71,7 @@ func getPredeclared() starlark.StringDict {
 		"NPROC":  starlark.String(strconv.Itoa(runtime.NumCPU())),
 		"path":   starlark.NewBuiltin("path", pathBuiltIn),
 		"shell":  starlark.NewBuiltin("shell", shellBuiltIn),
-		"fetch": starlark.NewBuiltin("fetch", fetchBuiltIn),
+		"fetch":  starlark.NewBuiltin("fetch", fetchBuiltIn),
 		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
 	}
 
