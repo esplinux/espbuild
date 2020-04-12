@@ -14,7 +14,7 @@ def automake(source, options="--prefix=''", target="install", env={}):
   make(source, "DESTDIR=" + out + " " + target, env)
   return out
 
-def tarball(out, package):
-  tarfile = path("-".join([package.name, package.version, package.rev]) + ".tgz")
+def tarball(out, name, version, rev):
+  tarfile = path("-".join([name, version, rev]) + ".tgz")
   shell ( "cd " + out + " ; tar -czf " + tarfile + " .")
   return tarfile
