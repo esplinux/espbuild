@@ -55,11 +55,10 @@ func getPredeclared() starlark.StringDict {
 		}
 
 		if http != "" {
-			if (file != "") {
+			if file != "" {
 				return getHttpFile(http, curdir, file)
-			} else {
-				return getHttpSource(http, curdir)
 			}
+			return getHttpSource(http, curdir)
 		} else if git != "" {
 			return getGit(git, branch, curdir)
 		} else {
