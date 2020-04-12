@@ -39,7 +39,7 @@ func getPredeclared() starlark.StringDict {
 		return starlark.None, shell(command, env)
 	}
 
-	sourceBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	fetchBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		buildfile, err := filepath.Abs(thread.Name)
 		if err != nil {
 			return starlark.None, err
@@ -66,7 +66,7 @@ func getPredeclared() starlark.StringDict {
 		"NPROC":  starlark.String(strconv.Itoa(runtime.NumCPU())),
 		"path":   starlark.NewBuiltin("path", pathBuiltIn),
 		"shell":  starlark.NewBuiltin("shell", shellBuiltIn),
-		"source": starlark.NewBuiltin("source", sourceBuiltIn),
+		"fetch": starlark.NewBuiltin("fetch", fetchBuiltIn),
 		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
 	}
 
