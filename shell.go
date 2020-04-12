@@ -43,7 +43,7 @@ func shell(command string, env *starlark.Dict) error {
 	}
 
 	stdoutBuf := new(bytes.Buffer)
-	if _, err :=  stdoutBuf.ReadFrom(stdout); err != nil {
+	if _, err := stdoutBuf.ReadFrom(stdout); err != nil {
 		return err
 	}
 
@@ -63,7 +63,7 @@ func shell(command string, env *starlark.Dict) error {
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("shell(%v): %s", err, stderrBuf.String())
 	}
-	
+
 	print(stdoutBuf.String())
 	return nil
 }

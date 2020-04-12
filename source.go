@@ -4,10 +4,12 @@ import (
 	"archive/tar"
 	"compress/bzip2"
 	"compress/gzip"
+	"fmt"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/ulikunitz/xz"
 	"go.starlark.net/starlark"
+	"golang.org/x/sys/unix"
 	"io"
 	"net"
 	"net/http"
@@ -62,7 +64,7 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 		reader = resp.Body
 	}
 
-	// Derived from example by Steve Domino
+	// Derived from example by Steve Domino and extended by reading golang std library source
 	// gist.githubusercontent.com/sdomino/635a5ed4f32c93aad131/raw/1f1a2609f9bf04f3a681a96c26350b0d694549bf/untargz.go
 	tr := tar.NewReader(reader)
 	for {
@@ -102,9 +104,8 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 				source = target
 			}
 
-			if _, err := os.Stat(target); err != nil {
-				err = os.MkdirAll(target, 0755)
-				if err != nil {
+			if fi, err := os.Lstat(target); !(err == nil && fi.IsDir()) {
+				if err = os.MkdirAll(target, 0755); err != nil {
 					return starlark.None, err
 				}
 			}
@@ -117,17 +118,58 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 			}
 
 			// copy over contents
-			_, err = io.Copy(f, tr)
-			if err != nil {
+			if _, err = io.Copy(f, tr); err != nil {
 				return starlark.None, err
 			}
 
 			// manually close here after each file operation; deferring would cause each file close
 			// to wait until all operations have completed.
-			err = f.Close()
-			if err != nil {
+			if err = f.Close(); err != nil {
 				return starlark.None, err
 			}
+			
+		case tar.TypeLink:
+			if err := os.Link(header.Linkname, target); err != nil {
+				return starlark.None, err
+			}
+
+		case tar.TypeSymlink:
+			if err := os.Symlink(header.Linkname, target); err != nil {
+				return starlark.None, err
+			}
+			
+		case tar.TypeChar:
+			mode := uint32(header.Mode & 07777)
+			mode |= unix.S_IFCHR
+			device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
+			if err := unix.Mknod(target, mode, device); err != nil {
+				return starlark.None, err
+			}
+
+		case tar.TypeBlock:
+			mode := uint32(header.Mode & 07777)
+			mode |= unix.S_IFBLK
+			device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
+			if err := unix.Mknod(target, mode, device); err != nil {
+				return starlark.None, err
+			}
+
+		case tar.TypeFifo:
+			mode := uint32(header.Mode & 07777)
+			mode |= unix.S_IFIFO
+			device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
+			if err := unix.Mknod(target, mode, device); err != nil {
+				return starlark.None, err
+			}
+
+		case tar.TypeXGlobalHeader:
+			warn(url + " contains a PAX Global Header which is unsupported, ignoring\n")
+
+		case tar.TypeGNUSparse:
+			return starlark.None, fmt.Errorf("tar entry %s of TypeGNUSparse is not suported", target)
+
+		default:
+			return starlark.None, fmt.Errorf("tar entry %s of %v is not supported", target, header.Typeflag)
 		}
 	}
 }
@@ -152,8 +194,7 @@ func getGit(url string, branch string, outputDir string) (starlark.Value, error)
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
-		_, err := git.PlainClone(outputDir, false, cloneOptions)
-		if err != nil {
+		if _, err := git.PlainClone(outputDir, false, cloneOptions); err != nil {
 			return starlark.None, err
 		}
 	} else {
@@ -173,8 +214,7 @@ func getGit(url string, branch string, outputDir string) (starlark.Value, error)
 			pullOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
-		err = workTree.Pull(pullOptions)
-		if err != git.NoErrAlreadyUpToDate {
+		if err := workTree.Pull(pullOptions); err != git.NoErrAlreadyUpToDate {
 			return starlark.None, err
 		}
 	}
