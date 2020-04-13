@@ -28,42 +28,14 @@ func shell(command string, env *starlark.Dict) error {
 	}
 	cmd.Env = envList
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
+	var outBuf, errBuf bytes.Buffer
+	cmd.Stdout = &outBuf
+	cmd.Stderr = &errBuf
+	if err := cmd.Run(); err != nil {
+		print(outBuf.String())
+		return fmt.Errorf("shell(%v): %s", err, errBuf.String())
 	}
+	print(outBuf.String())
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-
-	if err := cmd.Start(); err != nil {
-		return err
-	}
-
-	stdoutBuf := new(bytes.Buffer)
-	if _, err := stdoutBuf.ReadFrom(stdout); err != nil {
-		return err
-	}
-
-	stderrBuf := new(bytes.Buffer)
-	if _, err = stderrBuf.ReadFrom(stderr); err != nil {
-		return err
-	}
-
-	if err := stdout.Close(); err != nil {
-		return err
-	}
-
-	if err := stderr.Close(); err != nil {
-		return err
-	}
-
-	if err := cmd.Wait(); err != nil {
-		return fmt.Errorf("shell(%v): %s", err, stderrBuf.String())
-	}
-
-	print(stdoutBuf.String())
 	return nil
 }
