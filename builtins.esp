@@ -14,6 +14,15 @@ def automake(source, options="--prefix=''", target="install", env={}):
   make(source, "DESTDIR=" + out + " " + target, env)
   return out
 
+def cmake(source, options="-DCMAKE_INSTALL_PREFIX='' -DCMAKE_BUILD_TYPE=MinSizeRel", target="install", env={}):
+  build = source + "-build"
+  out = source + "-out"
+  shell("mkdir -p %s" % build)
+  shell("cd %s; cmake %s %s" % (build, source, options), env)
+  make(build, "-j " + NPROC, env)
+  make(build, "DESTDIR=" + out + " " + target, env)
+  return out
+
 def tarball(out, name, version, rev):
   tarfile = path("-".join([name, version, rev]) + ".tgz")
   shell ( "cd " + out + " ; tar -czf " + tarfile + " .")
