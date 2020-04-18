@@ -14,11 +14,13 @@ def automake(source, options="--prefix=''", target="install", env={}):
   make(source, "DESTDIR=" + out + " " + target, env)
   return out
 
-def cmake(source, options="-DCMAKE_INSTALL_PREFIX='' -DCMAKE_BUILD_TYPE=MinSizeRel", target="install", env={}):
+def cmake(source, options={"CMAKE_INSTALL_PREFIX": "", "CMAKE_BUILD_TYPE": "MinSizeRel"}, target="install", env={}):
   build = source + "-build"
   out = source + "-out"
+  optionsList = ["-D" + key + "=\"" + options[key] + "\"" for key in options]
+  optionsString = " ".join(optionsList)
   shell("mkdir -p %s" % build)
-  shell("cd %s; cmake %s %s" % (build, source, options), env)
+  shell("cd %s; cmake %s %s" % (build, source, optionsString), env)
   make(build, "-j " + NPROC, env)
   make(build, "DESTDIR=" + out + " " + target, env)
   return out
