@@ -29,7 +29,7 @@ def cmake(source, options={}, target="install", env={}):
   shell("mkdir -p %s" % build)
   command = "cd %s; cmake %s %s" % (build, source, opts)
   exec(command, env)
-  make(source, "-j " + NPROC + " DESTDIR=" + out + " " + target, env)
+  make(build, "-j " + NPROC + " DESTDIR=" + out + " " + target, env)
   return out
 
 def tarball(out, name, version, rev):
