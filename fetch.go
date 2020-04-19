@@ -23,7 +23,7 @@ import (
 func getHttpFile(url string, outputDir string, file string) (starlark.Value, error) {
 	target := filepath.Join(outputDir, file)
 
-	println("Downloading: " + url + " to " + target)
+	println("\u001b[37;1mDownloading: " + url + " to " + target + "\u001b[0m")
 
 	var netTransport = &http.Transport{
 		DialContext: (&net.Dialer{
@@ -68,7 +68,7 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 	urlSplit := strings.Split(url, "/")
 	outputFile := urlSplit[len(urlSplit)-1]
 
-	println("Downloading: " + url)
+	println("\u001b[37;1mDownloading: " + url + "\u001b[0m")
 
 	var netTransport = &http.Transport{
 		DialContext: (&net.Dialer{
@@ -208,7 +208,7 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 			}
 
 		case tar.TypeXGlobalHeader:
-			warn(url + " contains a PAX Global Header which is unsupported, ignoring\n")
+			warn(url + " contains a PAX Global Header which is unsupported, ignoring")
 
 		case tar.TypeGNUSparse:
 			return starlark.None, fmt.Errorf("tar entry %s of TypeGNUSparse is not suported", target)
@@ -223,10 +223,10 @@ func getGit(url string, branch string, outputDir string) (starlark.Value, error)
 	urlSplit := strings.Split(url, "/")
 	outputDir = outputDir + "/" + urlSplit[len(urlSplit)-1]
 	if branch == "" {
-		println("Cloning: " + url)
+		println("\u001b[37;1mCloning: " + url + "\u001b[0m")
 		outputDir = outputDir + "-HEAD"
 	} else {
-		println("Cloning[" + branch + "]: " + url)
+		println("\u001b[37;1mCloning[" + branch + "]: " + url + "\u001b[0m")
 		outputDir = outputDir + "-" + branch
 	}
 

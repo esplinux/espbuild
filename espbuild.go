@@ -35,8 +35,7 @@ func getPredeclared() starlark.StringDict {
 		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command, "env?", &env); err != nil {
 			return nil, err
 		}
-		println(thread.Name + ": " + command)
-		return starlark.None, shell(command, env)
+		return shell(command, env)
 	}
 
 	fetchBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -144,8 +143,9 @@ func main() {
 			}(arg)
 		}
 
-		for _, arg := range args {
-			println("Globals[" + arg + "]: " + <-ch)
+		for _, _ = range args {
+			<-ch
+			//println("Globals[" + arg + "]: " + <-ch)
 		}
 	}
 }

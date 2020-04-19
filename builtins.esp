@@ -1,11 +1,17 @@
 ESP_BUILD_VERSION = "0.0.1"
 BOOTSTRAP = False
 
+def exec(command, env):
+  result = shell(command, env)
+  print("\x1b[37;1m" + command + "\x1b[0m\n" + result)
+
 def configure(source, options="", env={}):
-  shell("cd " + source + "; ./configure " + options, env)
+  command = "cd " + source + "; ./configure " + options
+  exec(command, env)
 
 def make(source, target="", env={}):
-  shell("cd " + source + "; make " + target, env)
+  command = "cd " + source + "; make " + target
+  exec(command, env)
 
 def automake(source, options="--prefix=''", target="install", env={}):
   out = source + "-out"
@@ -22,12 +28,13 @@ def cmake(source, options={}, target="install", env={}):
   optsList = ["-D" + key + "=\"" + optMap[key] + "\"" for key in optMap]
   opts = " ".join(optsList)
   shell("mkdir -p %s" % build)
-  shell("cd %s; cmake %s %s" % (build, source, opts), env)
+  command = "cd %s; cmake %s %s" % (build, source, opts)
+  exec(command, env)
   make(build, "-j " + NPROC, env)
   make(build, "DESTDIR=" + out + " " + target, env)
   return out
 
 def tarball(out, name, version, rev):
   tarfile = path("-".join([name, version, rev]) + ".tgz")
-  shell ( "cd " + out + " ; tar -czf " + tarfile + " .")
+  shell("cd " + out + " ; tar -czf " + tarfile + " .")
   return tarfile
