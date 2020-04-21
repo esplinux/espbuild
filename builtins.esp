@@ -9,8 +9,8 @@ def configure(source, options="", env={}):
   command = "cd " + source + "; ./configure " + options
   exec(command, env)
 
-def make(source, target="", env={}):
-  command = "cd " + source + "; make " + target
+def make(build, target="", env={}):
+  command = "cd " + build + "; make " + target
   exec(command, env)
 
 def automake(source, options="--prefix=''", target="install", env={}):

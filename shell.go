@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go.starlark.net/starlark"
+	"io"
 	"os"
 	"os/exec"
 )
@@ -29,8 +30,8 @@ func shell(command string, env *starlark.Dict) (starlark.String, error) {
 	cmd.Env = envList
 
 	var outBuf, errBuf bytes.Buffer
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
+	cmd.Stdout = io.MultiWriter(os.Stdout, &outBuf)
+	cmd.Stderr = io.MultiWriter(os.Stderr, &errBuf)
 	if err := cmd.Run(); err != nil {
 		return starlark.String(outBuf.String()), fmt.Errorf("shell(%v): %s", err, errBuf.String())
 	}
