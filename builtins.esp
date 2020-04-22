@@ -1,17 +1,22 @@
 ESP_BUILD_VERSION = "0.0.1"
 BOOTSTRAP = False
 
-def exec(command, env):
-  result = shell(command, env)
+CMAKE_DEFAULTS = {"CMAKE_INSTALL_PREFIX": "", "CMAKE_BUILD_TYPE": "Release"}
+
+def exec(command, env={}):
+  result = shell(command, env=env)
   print("\x1b[37;1m" + command + "\x1b[0m\n" + result)
+
 
 def configure(source, options="", env={}):
   command = "cd " + source + "; ./configure " + options
   exec(command, env)
 
+
 def make(build, target="", env={}):
   command = "cd " + build + "; make " + target
   exec(command, env)
+
 
 def automake(source, options="--prefix=''", target="install", env={}):
   out = source + "-out"
@@ -19,20 +24,48 @@ def automake(source, options="--prefix=''", target="install", env={}):
   make(source, "-j " + NPROC + " DESTDIR=" + out + " " + target, env)
   return out
 
+
 def cmake(source, options={}, target="install", env={}):
   build = source + "-build"
   out = source + "-out"
-  optMap = {"CMAKE_INSTALL_PREFIX": "", "CMAKE_BUILD_TYPE": "Release"}
+
+  optMap = {}
+  optMap.update(CMAKE_DEFAULTS)
   optMap.update(options)
+
   optsList = ["-D" + key + "=\"" + optMap[key] + "\"" for key in optMap]
   opts = " ".join(optsList)
+
   shell("mkdir -p %s" % build)
   command = "cd %s; cmake %s %s" % (build, source, opts)
   exec(command, env)
   make(build, "-j " + NPROC + " DESTDIR=" + out + " " + target, env)
   return out
 
-def tarball(out, name, version, rev):
-  tarfile = path("-".join([name, version, rev]) + ".tgz")
-  shell("cd " + out + " ; tar -czf " + tarfile + " .")
-  return tarfile
+
+def contains(list, e):
+  for x in list:
+    if x == e:
+      return True
+  return False
+
+
+def tarball(name, version, rev, out, includes=[], includeRegex="", excludes=[], excludeRegex=""):
+  tarFile = path("-".join([name, version, rev]) + ".tgz")
+  files = find(out)
+
+  if len(includes) > 0:
+    includes = [out + "/" + x for x in includes]
+    files = [x for x in files if contains(includes, x)]
+
+  if includeRegex != "":
+    files = [x for x in files if match(includeRegex, x)]
+
+  if len(excludes) > 0:
+    excludes = [out + "/" + x for x in excludes]
+    files = [x for x in files if not contains(excludes, x)]
+
+  if excludeRegex !="":
+    files = [x for x in files if not match(excludeRegex, x)]
+
+  return tar(tarFile, out, files)

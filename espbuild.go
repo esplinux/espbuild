@@ -9,68 +9,127 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strconv"
 )
 
+const DEBUG = false
+
+func fetchBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking fetch " + thread.Name)
+
+	buildfile, err := filepath.Abs(thread.Name)
+	if err != nil {
+		return starlark.None, err
+	}
+	curdir := filepath.Dir(buildfile)
+
+	var http, git, branch, file string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "file?", &file, "git?", &git, "branch?", &branch); err != nil {
+		return nil, err
+	}
+
+	if http != "" {
+		if file != "" {
+			return getHttpFile(http, curdir, file)
+		}
+		return getHttpSource(http, curdir)
+	} else if git != "" {
+		return getGit(git, branch, curdir)
+	} else {
+		return starlark.None, errors.New("source only supports git and http")
+	}
+}
+
+func findBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking find " + thread.Name)
+
+	var glob string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "glob", &glob); err != nil {
+		return nil, err
+	}
+
+	globMatches, err := filepath.Glob(glob)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []starlark.Value
+	for _, globMatch := range globMatches {
+		err = filepath.Walk(globMatch, func(path string, info os.FileInfo, err error) error {
+			results = append(results, starlark.String(path))
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return starlark.NewList(results), nil
+}
+
+func matchBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking match " + thread.Name)
+
+	var regex, s string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "regex", &regex, "s", &s); err != nil {
+		return nil, err
+	}
+	matched, err := regexp.MatchString(regex, s)
+	return starlark.Bool(matched), err
+}
+
+func pathBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking path " + thread.Name)
+
+	buildfile, err := filepath.Abs(thread.Name)
+	if err != nil {
+		return starlark.None, err
+	}
+	curdir := filepath.Dir(buildfile)
+
+	var path string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "path", &path); err != nil {
+		return nil, err
+	}
+
+	return starlark.String(curdir + "/" + path), nil
+}
+
+func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking shell " + thread.Name)
+
+	var command string
+	var quiet bool
+	var env = &starlark.Dict{}
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command, "quiet?", &quiet, "env?", &env); err != nil {
+		return nil, err
+	}
+	return shell(command, quiet, env)
+}
+
+func tarBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking tar " + thread.Name)
+
+	var name, baseDir string
+	var files = &starlark.List{}
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "name", &name, "basedir", &baseDir, "files", &files); err != nil {
+		return nil, err
+	}
+	return Tar(name, baseDir, files)
+}
+
 func getPredeclared() starlark.StringDict {
-	pathBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		buildfile, err := filepath.Abs(thread.Name)
-		if err != nil {
-			return starlark.None, err
-		}
-		curdir := filepath.Dir(buildfile)
-
-		var path string
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "path", &path); err != nil {
-			return nil, err
-		}
-
-		return starlark.String(curdir + "/" + path), nil
-	}
-
-	shellBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		env := starlark.NewDict(3)
-		var command string
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command, "env?", &env); err != nil {
-			return nil, err
-		}
-		return shell(command, env)
-	}
-
-	fetchBuiltIn := func(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-		buildfile, err := filepath.Abs(thread.Name)
-		if err != nil {
-			return starlark.None, err
-		}
-		curdir := filepath.Dir(buildfile)
-
-		http := ""
-		git := ""
-		branch := ""
-		file := ""
-		if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "file?", &file, "git?", &git, "branch?", &branch); err != nil {
-			return nil, err
-		}
-
-		if http != "" {
-			if file != "" {
-				return getHttpFile(http, curdir, file)
-			}
-			return getHttpSource(http, curdir)
-		} else if git != "" {
-			return getGit(git, branch, curdir)
-		} else {
-			return starlark.None, errors.New("source only supports git and http")
-		}
-	}
-
 	predeclared := starlark.StringDict{
-		"NPROC":  starlark.String(strconv.Itoa(runtime.NumCPU())),
+		"fetch":  starlark.NewBuiltin("fetch", fetchBuiltIn),
+		"find":   starlark.NewBuiltin("find", findBuiltIn),
+		"match":  starlark.NewBuiltin("match", matchBuiltIn),
 		"path":   starlark.NewBuiltin("path", pathBuiltIn),
 		"shell":  starlark.NewBuiltin("shell", shellBuiltIn),
-		"fetch":  starlark.NewBuiltin("fetch", fetchBuiltIn),
 		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
+		"tar":    starlark.NewBuiltin("tar", tarBuiltIn),
+		"NPROC":  starlark.String(strconv.Itoa(runtime.NumCPU())),
 	}
 
 	return predeclared
@@ -143,9 +202,8 @@ func main() {
 			}(arg)
 		}
 
-		for _, _ = range args {
+		for range args {
 			<-ch
-			//println("Globals[" + arg + "]: " + <-ch)
 		}
 	}
 }
