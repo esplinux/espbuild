@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"go.starlark.net/starlark"
@@ -12,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"strings"
 )
 
 // Enables debug logging
@@ -144,6 +146,49 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
+func contains(sp *[]string, s string) bool {
+	for _, ss := range *sp {
+		if ss == s {
+			return true
+		}
+	}
+
+	return false
+}
+
+func preProcess(buildFiles *[]string, buildFile string) {
+	file, err := os.Open(buildFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		// Bit of a hack of a parser but does the job for now
+		line := scanner.Text()
+		if strings.ContainsRune(line, '#') {
+			buildFile = strings.Split(line, "#")[0]
+		}
+
+		if strings.Contains(line, "load(\"") {
+			load := strings.Split(strings.Split(line, "load(\"")[1], "\"")[0]
+			println("load: [" + load + "]")
+			if !contains(buildFiles, load) {
+				*buildFiles = append(*buildFiles, load)
+				preProcess(buildFiles, load)
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		fatal(err)
+	}
+
+	if err := file.Close(); err != nil {
+		fatal(err)
+	}
+}
+
 func main() {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
@@ -187,7 +232,15 @@ func main() {
 			}
 		}
 
-		// todo: emolitor preprocess files and preload all modules
+		var buildFiles []string
+		for _, arg := range args {
+			buildFiles = append(buildFiles, arg)
+			preProcess(&buildFiles, arg)
+		}
+
+		for _, buildFile := range buildFiles {
+			println("BuildFile: " + buildFile)
+		}
 
 		cache := &cache{
 			cache:       make(map[string]*entry),
@@ -195,17 +248,17 @@ func main() {
 		}
 
 		ch := make(chan string)
-		for _, arg := range args {
+		for _, buildFile := range buildFiles {
 			go func(buildfile string) {
 				globals, err := cache.Load(buildfile)
 				if err != nil {
 					log.Fatal(err)
 				}
 				ch <- fmt.Sprintf("%s = %s", buildfile, globals)
-			}(arg)
+			}(buildFile)
 		}
 
-		for range args {
+		for range buildFiles {
 			<-ch
 		}
 	}

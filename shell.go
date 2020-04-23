@@ -19,7 +19,7 @@ func shell(command string, quiet bool, env *starlark.Dict) (starlark.String, err
 	for iter.Next(&k) {
 		v, _, err := env.Get(k)
 		if err != nil {
-			return starlark.String(""), err
+			return "", err
 		}
 
 		key, _ := starlark.AsString(k)

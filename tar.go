@@ -19,11 +19,8 @@ func Tar(name string, baseDir string, files *starlark.List) (starlark.Value, err
 		return starlark.String(name), err
 	}
 
-	gzw := gzip.NewWriter(f)
-	defer closer(gzw)
-
-	tw := tar.NewWriter(gzw)
-	defer closer(tw)
+	gZipWriter := gzip.NewWriter(f)
+	tarWriter := tar.NewWriter(gZipWriter)
 
 	iter := files.Iterate()
 	defer iter.Done()
@@ -61,7 +58,7 @@ func Tar(name string, baseDir string, files *starlark.List) (starlark.Value, err
 		header.Name = strings.TrimPrefix(strings.Replace(file, baseDir, "", -1), string(filepath.Separator))
 
 		// write the header
-		if err := tw.WriteHeader(header); err != nil {
+		if err := tarWriter.WriteHeader(header); err != nil {
 			return starlark.String(name), err
 		}
 
@@ -77,7 +74,7 @@ func Tar(name string, baseDir string, files *starlark.List) (starlark.Value, err
 		}
 
 		// copy file data into tar writer
-		if _, err := io.Copy(tw, f); err != nil {
+		if _, err := io.Copy(tarWriter, f); err != nil {
 			return starlark.String(name), err
 		}
 
@@ -86,6 +83,14 @@ func Tar(name string, baseDir string, files *starlark.List) (starlark.Value, err
 		if err := f.Close(); err != nil {
 			return starlark.String(name), err
 		}
+	}
+
+	if err := tarWriter.Close(); err != nil {
+		return nil, err
+	}
+
+	if err := gZipWriter.Close(); err != nil {
+		return nil, err
 	}
 
 	return starlark.String(name), nil

@@ -38,7 +38,6 @@ func getHttpFile(url string, outputDir string, file string) (starlark.Value, err
 	if err != nil {
 		return starlark.None, err
 	}
-	defer closer(resp.Body)
 
 	outputDir = filepath.Dir(target)
 	if err = os.MkdirAll(outputDir, 0755); err != nil {
@@ -49,10 +48,17 @@ func getHttpFile(url string, outputDir string, file string) (starlark.Value, err
 	if err != nil {
 		return starlark.None, err
 	}
-	defer closer(out)
 
 	if _, err := io.Copy(out, resp.Body); err != nil {
 		return starlark.None, err
+	}
+
+	if err := out.Close(); err != nil {
+		return nil, err
+	}
+
+	if err := resp.Body.Close(); err != nil {
+		return nil, err
 	}
 
 	return starlark.String(target), nil
@@ -60,8 +66,6 @@ func getHttpFile(url string, outputDir string, file string) (starlark.Value, err
 
 // Sources have a timeout of 300 seconds aka 5 minutes
 func getHttpSource(url string, outputDir string) (starlark.Value, error) {
-	//source := ""
-
 	urlSplit := strings.Split(url, "/")
 	outputFile := urlSplit[len(urlSplit)-1]
 
@@ -86,7 +90,13 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 	if err != nil {
 		return starlark.None, err
 	}
-	defer closer(resp.Body)
+
+	defer func() {
+		err := resp.Body.Close()
+		if err == nil {
+			fatal(err)
+		}
+	}()
 
 	var reader io.Reader
 	if strings.HasSuffix(outputFile, "gz") {
@@ -94,7 +104,14 @@ func getHttpSource(url string, outputDir string) (starlark.Value, error) {
 		if err != nil {
 			return starlark.None, err
 		}
-		defer closer(gzipStream)
+
+		defer func() {
+			err := gzipStream.Close()
+			if err == nil {
+				fatal(err)
+			}
+		}()
+
 		reader = gzipStream
 	} else if strings.HasSuffix(outputFile, "bz") {
 		reader = bzip2.NewReader(resp.Body)

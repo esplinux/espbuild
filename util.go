@@ -2,15 +2,9 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os"
 )
-
-func closer(closer io.Closer) {
-	err := closer.Close()
-	fatal(err)
-}
 
 func debug(message string) {
 	if DEBUG {
