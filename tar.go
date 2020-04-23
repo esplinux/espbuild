@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+// Tar up a set of files and return the name of the tarfile
 func Tar(name string, baseDir string, files *starlark.List) (starlark.Value, error) {
 	f, err := os.Create(name)
 	if err != nil {
@@ -90,6 +91,119 @@ func Tar(name string, baseDir string, files *starlark.List) (starlark.Value, err
 	return starlark.String(name), nil
 }
 
+func dir(target string, source string) string {
+	// todo: eric@ this is evil and likely to eventually break
+	// Assumption: The first directory present in the tarball is the source directory
+	// this is an imperfect assumption but should almost always be correct.
+
+	if fi, err := os.Lstat(target); !(err == nil && fi.IsDir()) {
+		if err = os.MkdirAll(target, 0755); err != nil {
+			fatal(err)
+		}
+	}
+
+	if source == "" {
+		return target
+	}
+
+	return source
+}
+
+func file(header *tar.Header, reader io.Reader, target string) {
+	f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+	if err != nil {
+		fatal(err)
+	}
+
+	// copy over contents
+	if _, err = io.Copy(f, reader); err != nil {
+		fatal(err)
+	}
+
+	// manually close here after each file operation; deferring would cause each file close
+	// to wait until all operations have completed.
+	if err = f.Close(); err != nil {
+		fatal(err)
+	}
+}
+
+func link(header *tar.Header, target string) {
+	if err := os.Link(header.Linkname, target); err != nil {
+		fatal(err)
+	}
+}
+
+func symlink(header *tar.Header, target string) {
+	if err := os.Symlink(header.Linkname, target); err != nil {
+		fatal(err)
+	}
+}
+
+func char(header *tar.Header, target string) {
+	mode := uint32(header.Mode & 07777)
+	mode |= unix.S_IFCHR
+	device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
+	if err := unix.Mknod(target, mode, device); err != nil {
+		fatal(err)
+	}
+}
+
+func block(header *tar.Header, target string) {
+	mode := uint32(header.Mode & 07777)
+	mode |= unix.S_IFBLK
+	device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
+	if err := unix.Mknod(target, mode, device); err != nil {
+		fatal(err)
+	}
+}
+
+func fifo(header *tar.Header, target string) {
+	mode := uint32(header.Mode & 07777)
+	mode |= unix.S_IFIFO
+	device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
+	if err := unix.Mknod(target, mode, device); err != nil {
+		fatal(err)
+	}
+}
+
+func processTarEntry(header *tar.Header, reader io.Reader, target string, source string) string {
+	// the following switch could also be done using fi.Mode(), not sure if there a benefit of using one vs. the other.
+	// fi := header.FileInfo()
+
+	switch header.Typeflag {
+
+	case tar.TypeDir:
+		source = dir(target, source)
+
+	case tar.TypeReg:
+		file(header, reader, target)
+
+	case tar.TypeLink:
+		link(header, target)
+
+	case tar.TypeSymlink:
+		symlink(header, target)
+
+	case tar.TypeChar:
+		char(header, target)
+
+	case tar.TypeBlock:
+		block(header, target)
+
+	case tar.TypeFifo:
+		fifo(header, target)
+
+	case tar.TypeXGlobalHeader:
+		warn("ignoring unsupported PAX global header")
+
+	default:
+		fatal(fmt.Errorf("tar entry %s of %v is not supported", target, header.Typeflag))
+	}
+
+	return source
+}
+
+// Untar a set of files and return the name of the first directory created
 func UnTar(reader io.Reader, outputDir string) (starlark.Value, error) {
 	source := ""
 
@@ -115,89 +229,6 @@ func UnTar(reader io.Reader, outputDir string) (starlark.Value, error) {
 
 		// the target location where the dir/file should be created
 		target := filepath.Join(outputDir, header.Name)
-
-		// the following switch could also be done using fi.Mode(), not sure if there
-		// a benefit of using one vs. the other.
-		// fi := header.FileInfo()
-
-		// check the file type
-		switch header.Typeflag {
-
-		// if its a dir and it doesn't exist create it
-		case tar.TypeDir:
-			// todo: eric@ this is evil and likely to eventually break
-			// Assumption: The first directory present in the tarball is the source directory
-			// this is an imperfect assumption but should almost always be correct.
-			if source == "" {
-				source = target
-			}
-
-			if fi, err := os.Lstat(target); !(err == nil && fi.IsDir()) {
-				if err = os.MkdirAll(target, 0755); err != nil {
-					return starlark.None, err
-				}
-			}
-
-		// if it's a file create it
-		case tar.TypeReg:
-			f, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
-			if err != nil {
-				return starlark.None, err
-			}
-
-			// copy over contents
-			if _, err = io.Copy(f, tr); err != nil {
-				return starlark.None, err
-			}
-
-			// manually close here after each file operation; deferring would cause each file close
-			// to wait until all operations have completed.
-			if err = f.Close(); err != nil {
-				return starlark.None, err
-			}
-
-		case tar.TypeLink:
-			if err := os.Link(header.Linkname, target); err != nil {
-				return starlark.None, err
-			}
-
-		case tar.TypeSymlink:
-			if err := os.Symlink(header.Linkname, target); err != nil {
-				return starlark.None, err
-			}
-
-		case tar.TypeChar:
-			mode := uint32(header.Mode & 07777)
-			mode |= unix.S_IFCHR
-			device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
-			if err := unix.Mknod(target, mode, device); err != nil {
-				return starlark.None, err
-			}
-
-		case tar.TypeBlock:
-			mode := uint32(header.Mode & 07777)
-			mode |= unix.S_IFBLK
-			device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
-			if err := unix.Mknod(target, mode, device); err != nil {
-				return starlark.None, err
-			}
-
-		case tar.TypeFifo:
-			mode := uint32(header.Mode & 07777)
-			mode |= unix.S_IFIFO
-			device := int(unix.Mkdev(uint32(header.Devmajor), uint32(header.Devminor)))
-			if err := unix.Mknod(target, mode, device); err != nil {
-				return starlark.None, err
-			}
-
-		case tar.TypeXGlobalHeader:
-			warn("ignoring unsupported PAX global header")
-
-		case tar.TypeGNUSparse:
-			return starlark.None, fmt.Errorf("tar entry %s of TypeGNUSparse is not suported", target)
-
-		default:
-			return starlark.None, fmt.Errorf("tar entry %s of %v is not supported", target, header.Typeflag)
-		}
+		source = processTarEntry(header, tr, target, source)
 	}
 }

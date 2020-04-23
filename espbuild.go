@@ -14,6 +14,7 @@ import (
 	"strconv"
 )
 
+// Enables debug logging
 const DEBUG = false
 
 func fetchBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -185,6 +186,8 @@ func main() {
 				args = os.Args[3:]
 			}
 		}
+
+		// todo: emolitor preprocess files and preload all modules
 
 		cache := &cache{
 			cache:       make(map[string]*entry),
