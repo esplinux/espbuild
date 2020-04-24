@@ -194,7 +194,7 @@ func getBuiltInsPath() string {
 	if gopath == "" {
 		gopath = build.Default.GOPATH
 	}
-	
+
 	var builtins string
 	if fileExists("builtins.esp") {
 		builtins = "builtins.esp"
@@ -209,10 +209,11 @@ func getBuiltInsPath() string {
 	if builtins == "" {
 		log.Fatal("Could not find builtins.esp")
 	}
-	
+
 	return builtins
 }
 
+// todo: emolitor refactor to use flags
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage:")

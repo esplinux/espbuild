@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+// todo: emolitor add ETag/LastUpdate, etc cache support
+
 // Files have a timeout of 30 seconds
 func getHttpFile(url string, outputDir string, file string) (starlark.Value, error) {
 	target := filepath.Join(outputDir, file)
