@@ -208,7 +208,7 @@ func processTarEntry(header *tar.Header, reader io.Reader, target string, source
 	return source
 }
 
-// Untar a set of files and return the name of the first directory created
+// UnTar a set of files and return the name of the first directory created
 func UnTar(reader io.Reader, outputDir string) (starlark.Value, error) {
 	source := ""
 

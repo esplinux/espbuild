@@ -16,7 +16,7 @@ import (
 	"strings"
 )
 
-// Enables debug logging
+// DEBUG enables debug logging
 const DEBUG = false
 
 func fetchBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
@@ -167,7 +167,7 @@ func preProcess(buildFiles *[]string, buildFile string) {
 		// Bit of a hack of a parser but does the job for now
 		line := scanner.Text()
 		if strings.ContainsRune(line, '#') {
-			buildFile = strings.Split(line, "#")[0]
+			line = strings.Split(line, "#")[0]
 		}
 
 		if strings.Contains(line, "load(\"") {
