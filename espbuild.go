@@ -189,33 +189,38 @@ func preProcess(buildFiles *[]string, buildFile string) {
 	}
 }
 
-func main() {
+func getBuiltInsPath() string {
 	gopath := os.Getenv("GOPATH")
 	if gopath == "" {
 		gopath = build.Default.GOPATH
 	}
+	
+	var builtins string
+	if fileExists("builtins.esp") {
+		builtins = "builtins.esp"
+	} else if fileExists("/share/esp/builtins.esp") {
+		builtins = "/share/esp/builtins.esp"
+	} else if fileExists("/usr/share/esp/builtins.esp") {
+		builtins = "/usr/share/esp/builtins.esp"
+	} else if fileExists(gopath + "/src/github.com/esplinux/espbuild/builtins.esp") {
+		builtins = gopath + "/src/github.com/esplinux/espbuild/builtins.esp"
+	}
 
+	if builtins == "" {
+		log.Fatal("Could not find builtins.esp")
+	}
+	
+	return builtins
+}
+
+func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage:")
 		fmt.Println("\tespbuild package.esp")
 	} else {
-		var builtins string
-		if fileExists("builtins.esp") {
-			builtins = "builtins.esp"
-		} else if fileExists("/share/esp/builtins.esp") {
-			builtins = "/share/esp/builtins.esp"
-		} else if fileExists("/usr/share/esp/builtins.esp") {
-			builtins = "/usr/share/esp/builtins.esp"
-		} else if fileExists(gopath + "/src/github.com/esplinux/espbuild/builtins.esp") {
-			builtins = gopath + "/src/github.com/esplinux/espbuild/builtins.esp"
-		}
-
-		if builtins == "" {
-			log.Fatal("Could not find builtins.esp")
-		}
-
+		builtinsPath := getBuiltInsPath()
 		predeclared := getPredeclared()
-		globals, err := starlark.ExecFile(&starlark.Thread{Name: builtins}, builtins, nil, predeclared)
+		globals, err := starlark.ExecFile(&starlark.Thread{Name: "BuiltIns"}, builtinsPath, nil, predeclared)
 		fatal(err)
 
 		for k, v := range globals {
@@ -236,10 +241,6 @@ func main() {
 		for _, arg := range args {
 			buildFiles = append(buildFiles, arg)
 			preProcess(&buildFiles, arg)
-		}
-
-		for _, buildFile := range buildFiles {
-			println("BuildFile: " + buildFile)
 		}
 
 		cache := &cache{
