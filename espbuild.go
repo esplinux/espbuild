@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"github.com/containers/buildah"
+	"github.com/containers/storage/pkg/unshare"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
 	"go/build"
@@ -18,6 +20,77 @@ import (
 
 // DEBUG enables debug logging
 const DEBUG = false
+
+// builderCache is a cache of container name to builder references
+var containerCache = make(map[string]*container)
+
+func getContainerName(name string) string {
+	return strings.Split(name, ": ")[1]
+}
+
+func getContainer(b *starlark.Builtin) *container {
+	return containerCache[getContainerName(b.Name())]
+}
+
+func containerAdd(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking container.add " + thread.Name + " on " + b.Name())
+
+	var file string
+	dest := "/"
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "file", &file, "dest?", &dest); err != nil {
+		return nil, err
+	}
+
+	c := getContainer(b)
+	return starlark.None, c.add(file, dest)
+}
+
+func containerSetCmd(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking container.setCmd " + thread.Name + " on " + b.Name())
+
+	var cmd = &starlark.List{}
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "cmd", &cmd); err != nil {
+		return starlark.None, err
+	}
+
+	c := getContainer(b)
+	return starlark.None, c.setCmd(cmd)
+}
+
+func containerCommit(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking container.commit " + thread.Name + " on " + b.Name())
+
+	var name string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "name", &name); err != nil {
+		return starlark.None, err
+	}
+
+	c := getContainer(b)
+	return c.commit(name)
+}
+
+func containerBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking container " + thread.Name)
+
+	var from string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "from", &from); err != nil {
+		return nil, err
+	}
+
+	c, err := NewContainer(from)
+	if err != nil {
+		return nil, err
+	}
+
+	sd := starlark.StringDict{
+		"add":    starlark.NewBuiltin("container.add: "+c.name(), containerAdd),
+		"setCmd": starlark.NewBuiltin("container.setCmd: "+c.name(), containerSetCmd),
+		"commit": starlark.NewBuiltin("container.commit: "+c.name(), containerCommit),
+	}
+
+	containerCache[c.name()] = c
+	return starlarkstruct.FromStringDict(starlark.String("container: "+c.name()), sd), nil
+}
 
 func fetchBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	debug("invoking fetch " + thread.Name)
@@ -125,14 +198,15 @@ func tarBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 
 func getPredeclared() starlark.StringDict {
 	predeclared := starlark.StringDict{
-		"fetch":  starlark.NewBuiltin("fetch", fetchBuiltIn),
-		"find":   starlark.NewBuiltin("find", findBuiltIn),
-		"match":  starlark.NewBuiltin("match", matchBuiltIn),
-		"path":   starlark.NewBuiltin("path", pathBuiltIn),
-		"shell":  starlark.NewBuiltin("shell", shellBuiltIn),
-		"struct": starlark.NewBuiltin("struct", starlarkstruct.Make),
-		"tar":    starlark.NewBuiltin("tar", tarBuiltIn),
-		"NPROC":  starlark.String(strconv.Itoa(runtime.NumCPU())),
+		"container": starlark.NewBuiltin("container", containerBuiltIn),
+		"fetch":     starlark.NewBuiltin("fetch", fetchBuiltIn),
+		"find":      starlark.NewBuiltin("find", findBuiltIn),
+		"match":     starlark.NewBuiltin("match", matchBuiltIn),
+		"path":      starlark.NewBuiltin("path", pathBuiltIn),
+		"shell":     starlark.NewBuiltin("shell", shellBuiltIn),
+		"struct":    starlark.NewBuiltin("struct", starlarkstruct.Make),
+		"tar":       starlark.NewBuiltin("tar", tarBuiltIn),
+		"NPROC":     starlark.String(strconv.Itoa(runtime.NumCPU())),
 	}
 
 	return predeclared
@@ -172,7 +246,6 @@ func preProcess(buildFiles *[]string, buildFile string) {
 
 		if strings.Contains(line, "load(\"") {
 			load := strings.Split(strings.Split(line, "load(\"")[1], "\"")[0]
-			println("load: [" + load + "]")
 			if !contains(buildFiles, load) {
 				*buildFiles = append(*buildFiles, load)
 				preProcess(buildFiles, load)
@@ -180,7 +253,7 @@ func preProcess(buildFiles *[]string, buildFile string) {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err := scanner.Err(); err != nil {go 
 		fatal(err)
 	}
 
@@ -215,6 +288,34 @@ func getBuiltInsPath() string {
 
 // todo: emolitor refactor to use flags
 func main() {
+	if buildah.InitReexec() {
+		return
+	}
+	unshare.MaybeReexecUsingUserNamespace(false)
+
+	/*
+		container, err := NewContainer("scratch")
+		if err != nil {
+			fatal(err)
+		}
+
+		if err := container.addRoot("/home/emolitor/Development/esplinux/packages/toybox-HEAD-0.tgz"); err != nil {
+			fatal(err)
+		}
+		if err := container.addRoot("/home/emolitor/Development/esplinux/packages/dash-0.5.10.2-0.tgz"); err != nil {
+			fatal(err)
+		}
+
+		container.setCmd("sh")
+
+		imageId, err := container.commit()
+		if err != nil {
+			fatal(err)
+		}
+
+		println("imageID: " + imageId)
+	*/
+	// Begin actual main
 	if len(os.Args) < 2 {
 		fmt.Println("Usage:")
 		fmt.Println("\tespbuild package.esp")
