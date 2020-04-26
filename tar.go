@@ -86,11 +86,11 @@ func Tar(name string, baseDir string, files *starlark.List) (starlark.Value, err
 	}
 
 	if err := tarWriter.Close(); err != nil {
-		return nil, err
+		return starlark.None, err
 	}
 
 	if err := gZipWriter.Close(); err != nil {
-		return nil, err
+		return starlark.None, err
 	}
 
 	return starlark.String(name), nil

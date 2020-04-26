@@ -13,10 +13,10 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
 
-    - name: Set up Go 1.13
-      uses: actions/setup-go@v1
+    - name: Set up Go 1.14
+      uses: actions/setup-go@v2
       with:
-        go-version: 1.13
+        go-version: 1.14
       id: go
 
     - name: Check out code into the Go module directory
@@ -24,16 +24,11 @@ jobs:
 
     - name: Get dependencies
       run: |
-        sudo apt-get install libgpgme-dev
         go get -v -t -d ./...
-        if [ -f Gopkg.toml ]; then
-            curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
-        fi
 
     - name: Build
       run: |
-        env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags='-s -w' -v .
+        env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags containers_image_openpgp -ldflags='-s -w' -v .
         tar -czf espbuild.tar.gz espbuild builtins.esp
 
     - name: Create Release

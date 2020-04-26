@@ -45,6 +45,20 @@ func containerAdd(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 	return starlark.None, c.add(file, dest)
 }
 
+func containerRun(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking container.run " + thread.Name + " on " + b.Name())
+
+	var cmd = &starlark.List{}
+	var quiet bool
+	var env = &starlark.Dict{}
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "cmd", &cmd, "quiet?", &quiet, "env?", &env); err != nil {
+		return starlark.None, err
+	}
+
+	c := getContainer(b)
+	return c.run(cmd, quiet, env)
+}
+
 func containerSetCmd(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	debug("invoking container.setCmd " + thread.Name + " on " + b.Name())
 
@@ -74,7 +88,7 @@ func containerBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlar
 
 	var from string
 	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "from", &from); err != nil {
-		return nil, err
+		return starlark.None, err
 	}
 
 	c, err := NewContainer(from)
@@ -84,6 +98,7 @@ func containerBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlar
 
 	sd := starlark.StringDict{
 		"add":    starlark.NewBuiltin("container.add: "+c.name(), containerAdd),
+		"run":    starlark.NewBuiltin("container.run: "+c.name(), containerRun),
 		"setCmd": starlark.NewBuiltin("container.setCmd: "+c.name(), containerSetCmd),
 		"commit": starlark.NewBuiltin("container.commit: "+c.name(), containerCommit),
 	}
@@ -103,7 +118,7 @@ func fetchBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 
 	var http, git, branch, file string
 	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "http?", &http, "file?", &file, "git?", &git, "branch?", &branch); err != nil {
-		return nil, err
+		return starlark.None, err
 	}
 
 	if http != "" {
@@ -138,7 +153,7 @@ func findBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tup
 			return nil
 		})
 		if err != nil {
-			return nil, err
+			return starlark.None, err
 		}
 	}
 
@@ -180,7 +195,7 @@ func shellBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tu
 	var quiet bool
 	var env = &starlark.Dict{}
 	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "command", &command, "quiet?", &quiet, "env?", &env); err != nil {
-		return nil, err
+		return starlark.None, err
 	}
 	return shell(command, quiet, env)
 }
@@ -191,7 +206,7 @@ func tarBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tupl
 	var name, baseDir string
 	var files = &starlark.List{}
 	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "name", &name, "basedir", &baseDir, "files", &files); err != nil {
-		return nil, err
+		return starlark.None, err
 	}
 	return Tar(name, baseDir, files)
 }
@@ -253,8 +268,8 @@ func preProcess(buildFiles *[]string, buildFile string) {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {go 
-		fatal(err)
+	if err := scanner.Err(); err != nil {
+		go fatal(err)
 	}
 
 	if err := file.Close(); err != nil {
