@@ -24,6 +24,7 @@ jobs:
 
     - name: Get dependencies
       run: |
+        apt-get install libdevmapper-dev
         go get -v -t -d ./...
 
     - name: Build
