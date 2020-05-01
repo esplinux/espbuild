@@ -5,25 +5,24 @@ CMAKE_DEFAULTS = {"CMAKE_INSTALL_PREFIX": "", "CMAKE_BUILD_TYPE": "Release"}
 
 def exec(command, env={}):
   result = shell(command, env=env)
-  print("\x1b[37;1m" + command + "\x1b[0m\n" + result)
-
+  if result.strip() != "":
+    print("\x1b[37;1m" + command + "\x1b[0m\n" + result)
+  else:
+    print("\x1b[37;1m" + command + "\x1b[0m")
 
 def configure(source, options="", env={}):
   command = "cd " + source + "; ./configure " + options
   exec(command, env)
 
-
 def make(build, target="", env={}):
   command = "cd " + build + "; make " + target
   exec(command, env)
-
 
 def automake(source, options="--prefix=''", target="install", env={}):
   out = source + "-out"
   configure(source, options, env)
   make(source, "-j " + NPROC + " DESTDIR=" + out + " " + target, env)
   return out
-
 
 def cmake(source, options={}, target="install", env={}):
   build = source + "-build"
@@ -42,13 +41,11 @@ def cmake(source, options={}, target="install", env={}):
   make(build, "-j " + NPROC + " DESTDIR=" + out + " " + target, env)
   return out
 
-
 def contains(list, e):
   for x in list:
     if x == e:
       return True
   return False
-
 
 def tarball(name, version, rev, out, includes=[], includeRegex="", excludes=[], excludeRegex=""):
   tarFile = path("-".join([name, version, rev]) + ".tgz")

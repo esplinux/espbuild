@@ -160,6 +160,46 @@ func findBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tup
 	return starlark.NewList(results), nil
 }
 
+func isDirBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking isDir " + thread.Name)
+
+	var file string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "file", &file); err != nil {
+		return nil, err
+	}
+
+	// ensure the file actually exists before trying to tar it
+	fileInfo, err := os.Stat(file)
+	if err != nil {
+		return starlark.None, fmt.Errorf("unable to isDir file - %v", err.Error())
+	}
+
+	return starlark.Bool(fileInfo.Mode().IsDir()), nil
+}
+
+func lstatBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	debug("invoking lstat " + thread.Name)
+
+	var file string
+	if err := starlark.UnpackArgs(b.Name(), args, kwargs, "file", &file); err != nil {
+		return nil, err
+	}
+
+	// ensure the file actually exists before trying to tar it
+	fileInfo, err := os.Lstat(file)
+	if err != nil {
+		return starlark.None, fmt.Errorf("unable to lstat file - %v", err.Error())
+	}
+
+	name := fileInfo.Name()
+	if fileInfo.Mode()&os.ModeSymlink != 0 { // check if Symlink bit set
+		name, err = os.Readlink(file) // Set name to link
+		return starlark.String(name), err
+	}
+
+	return starlark.String(""), nil
+}
+
 func matchBuiltIn(thread *starlark.Thread, b *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	debug("invoking match " + thread.Name)
 
@@ -216,6 +256,8 @@ func getPredeclared() starlark.StringDict {
 		"container": starlark.NewBuiltin("container", containerBuiltIn),
 		"fetch":     starlark.NewBuiltin("fetch", fetchBuiltIn),
 		"find":      starlark.NewBuiltin("find", findBuiltIn),
+		"isDir":     starlark.NewBuiltin("isDir", isDirBuiltIn),
+		"lstat":     starlark.NewBuiltin("lstat", lstatBuiltIn),
 		"match":     starlark.NewBuiltin("match", matchBuiltIn),
 		"path":      starlark.NewBuiltin("path", pathBuiltIn),
 		"shell":     starlark.NewBuiltin("shell", shellBuiltIn),

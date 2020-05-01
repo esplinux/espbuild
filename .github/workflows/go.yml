@@ -28,7 +28,7 @@ jobs:
 
     - name: Build
       run: |
-        env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -tags containers_image_openpgp -ldflags='-s -w' -v .
+        go build -tags containers_image_openpgp -ldflags='-s -w' -v .
         tar -czf espbuild.tar.gz espbuild builtins.esp
 
     - name: Create Release
